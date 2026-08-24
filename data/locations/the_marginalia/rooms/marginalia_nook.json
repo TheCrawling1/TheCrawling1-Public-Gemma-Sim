@@ -1,0 +1,19 @@
+{
+  "id": "marginalia_nook",
+  "type": "room",
+  "name": "Reading Nook",
+  "description": "A snug corner off the main floor with two worn armchairs, a low table ringed with old mug stains, and a lamp with a crooked shade. The poetry shelf lives here — currently reorganised into a system only Dex fully understands. It's the quietest spot in the shop and the first place Iris sends anyone having a bad day.",
+  "tags": [
+    "interior",
+    "quiet"
+  ],
+  "example_text": "Reading nook: two worn armchairs, a lamp with a crooked shade, the poetry shelf, a stained low table.",
+  "children": [],
+  "properties": {
+    "size": "small",
+    "lighting": "soft and low, a single crooked-shade lamp",
+    "exits": [
+      "marginalia_floor"
+    ]
+  }
+}

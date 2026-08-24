@@ -1,0 +1,70 @@
+{
+  "id": "texting",
+  "type": "module",
+  "name": "Texting",
+  "description": "Compose text messages to a character. The recipient replies in texting mode — environmental context (surroundings, others present, scene effects, items, wardrobe overrides) is stripped from their prompt so they don't 'see' the room. Useful for off-scene check-ins, SMS interludes, and any beat where the character isn't physically with the user. Per-block strip settings let you tune what falls away.",
+  "tags": ["communication", "prompt-filter", "gui"],
+  "requires": [],
+  "conflicts": [],
+  "settings": [
+    {
+      "id": "strip_surroundings",
+      "type": "bool",
+      "default": true,
+      "label": "Strip Surroundings",
+      "help": "Drop the [Surroundings] block from the responder's prompt when they're replying to a text.",
+      "live_editable": true
+    },
+    {
+      "id": "strip_others_present",
+      "type": "bool",
+      "default": true,
+      "label": "Strip Others present",
+      "help": "Drop the [Others present] block — text recipients don't see who else is in the user's room.",
+      "live_editable": true
+    },
+    {
+      "id": "strip_items_in_scene",
+      "type": "bool",
+      "default": true,
+      "label": "Strip Items in scene",
+      "help": "Drop the [Items in scene] block. Off if you want the recipient to react to objects the user mentions.",
+      "live_editable": true
+    },
+    {
+      "id": "strip_scene_effects",
+      "type": "bool",
+      "default": true,
+      "label": "Strip Scene effects",
+      "help": "Drop scene-effect rules. Off if the magic / scene rules apply to texts too (rare).",
+      "live_editable": true
+    },
+    {
+      "id": "strip_wardrobe_overrides",
+      "type": "bool",
+      "default": true,
+      "label": "Strip Wardrobe overrides",
+      "help": "Drop the [Wardrobe overrides] block — text recipients don't need the slot directives that the on-screen render uses.",
+      "live_editable": true
+    },
+    {
+      "id": "render_style",
+      "type": "enum",
+      "default": "sms_bubble",
+      "options": ["sms_bubble", "tinted", "inline_badge"],
+      "label": "Bubble style",
+      "help": "How texting turns render in chat. 'sms_bubble' = right/left-aligned chat bubbles; 'tinted' = muted background tint on the message body; 'inline_badge' = small SMS icon next to the speaker name.",
+      "live_editable": true
+    }
+  ],
+  "contributes": {
+    "gui_controls": [
+      {
+        "slot": "composer_right",
+        "kind": "target_picker",
+        "label": "Text",
+        "title": "Send the next message as a text to a specific character — environmental prompt blocks are stripped from their reply."
+      }
+    ]
+  }
+}

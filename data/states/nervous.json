@@ -1,0 +1,17 @@
+{
+  "id": "nervous",
+  "type": "state",
+  "name": "Nervous",
+  "description": "Generic anxious/on-edge state. Apply with [state <char> -> nervous]. Layers anxiety and jitter onto the character; overlays append to existing anatomy prose.",
+  "tags": ["state", "generic", "affect"],
+  "example_text": "",
+  "children": [],
+  "properties": {
+    "affect_summary": "Nervous — on edge and second-guessing herself, anxious about how this goes. Words come a little fast or a little stuck; she's bracing for something to go wrong.",
+    "mannerism_overlay": "Fidgets with her hands or sleeves, glances at exits, laughs too quickly to fill silences, talks a touch fast, picks at a thumbnail.",
+    "body_overlays": {
+      "head": "Her eyes dart and won't quite settle, a tight uncertain set to her mouth; she keeps swallowing.",
+      "hands": "Her hands won't stay still — fingers twisting together, picking at a nail, fidgeting with whatever's in reach."
+    }
+  }
+}

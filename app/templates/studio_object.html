@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}{{ entity.name if entity else 'New object' }} — GemmaSim{% endblock %}
+{% block body_class %}studio-body editor-body{% endblock %}
+{% block head %}
+  <script id="entity-data" type="application/json">{{ entity|tojson if entity else 'null' }}</script>
+  <script id="entity-type" type="text/plain">object</script>
+  <script id="entity-is-new" type="text/plain">{{ 'true' if is_new else 'false' }}</script>
+{% endblock %}
+{% block content %}
+<section class="page-head editor-head">
+  <div>
+    <p class="muted small"><a href="{{ url_for('pages.studio') }}">← Studio</a></p>
+    <h1>{{ entity.name if entity else 'New object' }}</h1>
+    <p class="muted small">{{ entity.id if entity else '' }}</p>
+  </div>
+  <div class="page-head-actions">
+    <span id="editor-status" class="muted small"></span>
+    <button class="ghost" id="delete-entity">Delete</button>
+    <button class="primary" id="save-entity">Save</button>
+  </div>
+</section>
+
+<nav class="editor-tabs">
+  <a href="#" data-tab="form" class="active">Sheet</a>
+  <a href="#" data-tab="json">JSON source</a>
+</nav>
+
+<form class="editor-form" id="editor-form" autocomplete="off">
+
+<div data-panel="form">
+  <div class="editor-grid">
+    <section class="editor-card span-2">
+      <h3>Identity</h3>
+      <label class="stack"><span>ID</span>
+        <input type="text" data-field="id" {% if not is_new %}readonly{% endif %} /></label>
+      <label class="stack"><span>Name</span>
+        <input type="text" data-field="name" /></label>
+      <label class="stack"><span>Tags</span>
+        <input type="text" data-field="tags" data-list="comma" /></label>
+      <label class="stack"><span>Description</span>
+        <textarea rows="6" data-field="description" placeholder="What it is, what it looks like."></textarea></label>
+      <label class="stack"><span>Example text</span>
+        <textarea rows="2" data-field="example_text"></textarea></label>
+    </section>
+
+    <section class="editor-card">
+      <h3>Properties</h3>
+      <label class="stack"><span>Slot <span class="muted small">(if held / worn)</span></span>
+        <input type="text" data-field="properties.slot" placeholder="held / pocket / hand / wrist / waist / …" /></label>
+      <label class="row toggle">
+        <input type="checkbox" data-field="properties.takeable" />
+        <span>Takeable</span>
+      </label>
+      <label class="row toggle">
+        <input type="checkbox" data-field="properties.consumable" />
+        <span>Consumable</span>
+      </label>
+      <label class="stack"><span>Default state</span>
+        <input type="text" data-field="properties.state" placeholder="full / empty / on / off" /></label>
+      <label class="stack"><span>Owner / location <span class="muted small">(default placement; scenarios can override)</span></span>
+        <input type="text" data-field="properties.default_owner" /></label>
+    </section>
+
+    <section class="editor-card span-2">
+      <h3>Effect <span class="muted small">(rendered into the system prompt)</span></h3>
+      <p class="muted small">What this object does in scene. Surfaced to the model under <code>[Items in scene]</code> alongside the description and slot, so the partner / narrator can act on it.</p>
+      <label class="stack"><span>Effect</span>
+        <textarea rows="6" data-field="properties.effect" placeholder="While worn, anyone interacting with the wearer is convinced …"></textarea></label>
+      <label class="stack"><span>Limitations</span>
+        <textarea rows="4" data-field="properties.limitations" placeholder="Edge cases, escape hatches, who it doesn't work on, when it ends, …"></textarea></label>
+    </section>
+
+    <section class="editor-card span-2">
+      <h3>Item metadata <span class="muted small">(optional — descriptive only)</span></h3>
+      <p class="muted small">Tags the engine doesn't currently read but a future item-application pass might. Authoring conventions used by the Trap items: <code>rarity</code> (common / uncommon / rare / very_rare), <code>curse_type</code> (perception_override / scenario_immersion / behavioral_compulsion / …), <code>duration</code> (while_worn / while_held / one_session / permanent / …), <code>key_rule</code> (one-line summary).</p>
+      <div class="editor-row">
+        <label class="stack"><span>Rarity</span>
+          <input type="text" data-field="properties.rarity" placeholder="common / rare / very_rare / …" /></label>
+        <label class="stack"><span>Curse type</span>
+          <input type="text" data-field="properties.curse_type" placeholder="perception_override / behavioral_compulsion / …" /></label>
+      </div>
+      <div class="editor-row">
+        <label class="stack"><span>Duration</span>
+          <input type="text" data-field="properties.duration" placeholder="while_worn / one_session / permanent / …" /></label>
+        <label class="stack"><span>Key rule</span>
+          <input type="text" data-field="properties.key_rule" placeholder="One-line summary of the load-bearing rule." /></label>
+      </div>
+    </section>
+  </div>
+  <p class="muted small">Objects are still an outline — the field set will grow as we use them.</p>
+</div>
+
+<div data-panel="json" style="display: none;">
+  <section class="editor-card">
+    <h3>JSON source</h3>
+    <textarea id="entity-json" class="json-textarea" rows="30" spellcheck="false"></textarea>
+  </section>
+</div>
+
+</form>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/studio_generic.js') }}"></script>
+<script>window.STUDIO_DEFAULT_TYPE = 'object';</script>
+{% endblock %}

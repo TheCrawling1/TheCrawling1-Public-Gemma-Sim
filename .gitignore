@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.env.local
+
+# Runtime / instance data (never committed)
+flask_session/
+instance/
+instances/
+data/users.json
+config.local.json
+config.json
+
+# Private user content. Anything dropped under data/private/ is loaded by
+# the engine (the loader recurses) but never committed.
+data/private/
+
+# Optional local sprite/image assets (characters run text-only without them).
+data/sprites/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Node tooling occasionally used for headless render checks
+node_modules/
+package.json
+package-lock.json

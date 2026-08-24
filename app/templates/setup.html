@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% set hide_nav = true %}
+{% block title %}First-run setup — GemmaSim{% endblock %}
+{% block body_class %}auth{% endblock %}
+{% block content %}
+<div class="auth-card">
+  <header class="auth-head">
+    <span class="brand-mark large">G</span>
+    <h1>Create your account</h1>
+    <p class="muted">No users exist yet. Pick a username and password.</p>
+  </header>
+  <form method="post" class="auth-form">
+    <label>
+      <span>Username</span>
+      <input type="text" name="username" autocomplete="username" required autofocus />
+    </label>
+    <label>
+      <span>Password (min 8 chars)</span>
+      <input type="password" name="password" autocomplete="new-password" required />
+    </label>
+    <label>
+      <span>Confirm password</span>
+      <input type="password" name="confirm" autocomplete="new-password" required />
+    </label>
+    <button type="submit" class="primary block">Create account</button>
+  </form>
+</div>
+{% endblock %}

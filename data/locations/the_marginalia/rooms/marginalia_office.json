@@ -1,0 +1,20 @@
+{
+  "id": "marginalia_office",
+  "type": "room",
+  "name": "Back Office",
+  "description": "A cramped back room behind the counter, half storeroom and half office: boxes of unsorted stock, a desk buried under invoices, a kettle, and the back stairs up to the roof. A corkboard by the door is layered with flyers, postcards, and a single stubborn note in Iris's aunt's handwriting.",
+  "tags": [
+    "interior",
+    "back"
+  ],
+  "example_text": "Back office: stock boxes, an invoice-buried desk, a kettle, a corkboard, and the stairs up to the roof.",
+  "children": [],
+  "properties": {
+    "size": "small",
+    "lighting": "a single bare bulb and whatever leaks in from the counter",
+    "exits": [
+      "marginalia_counter",
+      "marginalia_rooftop"
+    ]
+  }
+}

@@ -1,0 +1,689 @@
+{% extends "base.html" %}
+{% block title %}{{ conversation.title }} — GemmaSim{% endblock %}
+{% block body_class %}chat{% endblock %}
+{% block content %}
+<div class="chat-shell"
+     data-conversation-id="{{ conversation.id }}"
+     data-active-leaf="{{ conversation.active_path_leaf }}">
+  <div class="drawer-backdrop" id="drawer-backdrop"></div>
+
+  <aside class="chat-side left" id="left-panel">
+    <header class="side-head">
+      <h3 class="conv-title-h">{{ conversation.title }}</h3>
+      <button class="ghost icon" id="toggle-left" title="Close" aria-label="Close sidebar">×</button>
+    </header>
+
+    {% if conversation.scenario_id %}
+    <section class="side-block">
+      <button class="ghost small full" id="edit-scenario-btn"
+              data-scenario-id="{{ conversation.scenario_id }}"
+              title="Open this conversation's scenario for editing in the right panel">
+        Edit scenario · {{ conversation.scenario_id }}
+      </button>
+      <button class="ghost small full" id="reset-scene-btn"
+              title="Wipe every message + the running summary and re-create the scenario opening + greetings. Instance edits to characters/outfits stay.">
+        Reset to scenario
+      </button>
+      <button class="ghost small full" id="setup-from-directive-btn"
+              title="Describe a setup in your own words; the narrator translates it into a new branchable opening (outfits + locations + user persona).">
+        + Setup from directive
+      </button>
+    </section>
+    {% endif %}
+
+    <details class="side-block side-collapsible" id="cast-section" open>
+      <summary><h4>Cast</h4></summary>
+      <label class="stack persona-picker" title="Pick a user-tagged character as your persona. The character is auto-cast into the scene, and {{ '{{user}}' }} expands to their name + description.">
+        <span class="muted small">Your persona</span>
+        <select id="persona-card-picker" class="full">
+          <option value="">— none (default User) —</option>
+          {% for c in user_personas %}
+            <option value="{{ c.id }}" {% if effective_user_persona and effective_user_persona.card_id == c.id %}selected{% endif %}>{{ c.name or c.id }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="toggle compact" id="show-hidden-cast-wrap" title="Reveal cast members the scenario keeps hidden from you (e.g. monsters waiting in rooms you haven't reached). GM view.">
+        <input type="checkbox" id="show-hidden-cast" /> <span class="muted small">Show hidden cast</span>
+      </label>
+      <ul class="cast-list"></ul>
+    </details>
+
+    <details class="side-block side-collapsible" id="objects-section" open>
+      <summary><h4>Objects</h4></summary>
+      <p class="muted small" id="objects-empty">No objects in the scene.</p>
+      <ul class="objects-list cast-list"></ul>
+    </details>
+
+    <details class="side-block side-collapsible" id="turn-section" open>
+      <summary><h4>Turn &amp; speakers</h4></summary>
+      <label class="stack">
+        <span class="muted small">Speak as</span>
+        <select id="persona-select" class="full">
+          <option value="user">User (you)</option>
+          <option value="narrator">Narrator</option>
+          {% for eid, e in entities.items() if e.type == 'character' and eid != 'user' and eid in effective_cast.characters %}
+            <option value="{{ eid }}">{{ e.name or eid }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="stack">
+        <span class="muted small">Reply as — auto-runs after you send; Generate re-rolls without sending</span>
+        <select id="responder-select" class="full" data-default-responder="{{ default_responder }}">
+          <option value="narrator">Narrator</option>
+          {% for eid, e in entities.items() if e.type == 'character' and eid != 'user' and eid in effective_cast.characters and 'player' not in (e.tags or []) %}
+            <option value="{{ eid }}" {% if eid == default_responder %}selected{% endif %}>{{ e.name or eid }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="stack" title="Rotating: after each AI turn the Reply-as picker advances to the next character in the scenario list. Auto: pick the next responder from a [next: <id>] directive in the last reply, name mentions in the body, or round-robin fallback. The Reply-as dropdown is always the user override — change it before the autoplay countdown fires and the user's pick wins.">
+        <span class="muted small">Turn mode</span>
+        <select id="turn-mode" class="full">
+          {% for v in ['manual','rotating','auto'] %}
+            <option value="{{ v }}" {% if conversation.settings.turn_mode == v %}selected{% endif %}>{{ v }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="stack">
+        <span class="muted small">Narrator mode</span>
+        <select id="narrator-mode" class="full">
+          {% for v in ['auto','manual','off'] %}
+            <option value="{{ v }}" {% if conversation.settings.narrator_mode == v %}selected{% endif %}>{{ v }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </details>
+
+    <details class="side-block side-collapsible toggles" id="automation-section">
+      <summary><h4>Automation</h4></summary>
+      <label class="toggle">
+        <input type="checkbox" id="locational-toggle"
+          {% if conversation.settings.locational_memory %}checked{% endif %} />
+        Locational memory
+      </label>
+      <label class="toggle" title="When you @-mention a character or write their name, set them as the responder for this turn.">
+        <input type="checkbox" id="mention-toggle"
+          {% if conversation.settings.auto_responder_by_mention %}checked{% endif %} />
+        Auto-pick responder by mention
+      </label>
+      <label class="toggle" title="Apply narrator-emitted [move]/[outfit]/[set] directives + ```edits``` blocks automatically. Off = collect them as pending and let you review before applying.">
+        <input type="checkbox" id="auto-apply-edits-toggle"
+          {% if conversation.settings.auto_apply_narrator_edits is not defined or conversation.settings.auto_apply_narrator_edits %}checked{% endif %} />
+        Auto-apply narrator edits
+      </label>
+      <div class="auto-state-panel">
+        <span class="muted small">Auto State — after a turn, surgical side-calls re-read the prose and sync the chosen aspects. Each is an independent model call; enable only what you need.</span>
+        <label class="toggle" title="Wardrobe pass: re-reads the prose and emits any clothing-slot / outfit directives the main pass missed, keeping the rendered image in sync.">
+          <input type="checkbox" id="auto-state-toggle"
+            {% if conversation.settings.auto_state_changes %}checked{% endif %} />
+          Clothing
+        </label>
+        <label class="toggle" title="Transparency pass: tracks fabric going see-through (wet / soaked / sheer) or back to opaque, updating per-slot clothing_transparency.">
+          <input type="checkbox" id="auto-state-transparency-toggle"
+            {% if conversation.settings.auto_state_transparency %}checked{% endif %} />
+          Transparency
+        </label>
+        <label class="toggle" title="Location pass: tracks the focal character moving to a different room in the scene and emits the matching [move] directive.">
+          <input type="checkbox" id="auto-state-location-toggle"
+            {% if conversation.settings.auto_state_location %}checked{% endif %} />
+          Location
+        </label>
+      </div>
+      <label class="toggle subtoggle" title="ALSO run auto-state on the user's own messages — useful when the user narrates their own state changes (&quot;I take off my shirt&quot;) and wants the engine state to catch up. Off by default because it doubles the auto-state model-call frequency. Requires the parent Auto state changes toggle to be on; this sub-toggle is no-op when the parent is off.">
+        <input type="checkbox" id="auto-state-on-user-toggle"
+          {% if conversation.settings.auto_state_on_user_messages %}checked{% endif %} />
+        … also on user messages
+      </label>
+      <label class="toggle subtoggle" title="ALSO run on user-typed NARRATOR messages, BUT route through the full narrator-add prompt instead of the wardrobe-only auto-state prompt. Lets a beat like &quot;three coworkers pile into the elevator&quot; auto-encode the implied [cast_add] + [move] + [outfit] edits. More expensive than the wardrobe pass since the narrator-add prompt is much larger. Off by default. Requires the parent Auto state changes toggle to be on.">
+        <input type="checkbox" id="auto-state-on-narrator-toggle"
+          {% if conversation.settings.auto_state_on_narrator_messages %}checked{% endif %} />
+        … also on narrator messages (full narrator pass)
+      </label>
+      <div class="auto-state-panel">
+        <span class="muted small">Narrator — what the narrator may create on top of applying edits. Per-conversation opt-in.</span>
+        <label class="toggle" title="When on, the narrator can create new characters: clone/derive a new character from an existing one (e.g. a doll version of Serena that keeps her face/hair, then overlays the changes) AND author brand-new characters from scratch. Off = it may only skin the generic templates.">
+          <input type="checkbox" id="narrator-make-characters" />
+          Make characters
+        </label>
+        <label class="toggle" title="When on, after the narrator meaningfully changes a character, a focused second model call rewrites that character's dialogue examples (dialogue_pairs) to match who they are now — a doll speaks doll-like, a drunk slurs. Costs an extra model call when it fires.">
+          <input type="checkbox" id="narrator-make-pairs" />
+          Make pairs
+        </label>
+      </div>
+    </details>
+
+    <details class="side-block side-collapsible" id="scenario-instructions-section" open>
+      <summary><h4>Scenario instructions</h4></summary>
+      <p class="muted small">Injected as the <code>[Scenario]</code> block in the system prompt. <strong>Base</strong> is the scenario-wide rules; <strong>Setup append</strong> adds the active sub-scenario's overrides. Both are pulled from the active setup root and edited in place — switching to a sibling root shows that setup's text instead.</p>
+      <label class="stack">
+        <span class="muted small">Base (scenario-wide)</span>
+        <textarea id="scenario-instructions-base" rows="4" placeholder="(none)"></textarea>
+      </label>
+      <label class="stack">
+        <span class="muted small">Setup append (this sub-scenario)</span>
+        <textarea id="scenario-instructions-append" rows="4" placeholder="(none)"></textarea>
+      </label>
+      <div class="editor-actions">
+        <button class="primary small" id="save-scenario-instructions">Save</button>
+      </div>
+      <p class="status-line small" id="scenario-instructions-status"></p>
+    </details>
+
+    <details class="side-block side-collapsible" id="scenario-edits-section">
+      <summary><h4>Scenario edits</h4></summary>
+      <p class="muted small">The active sub-scenario's <code>state</code> directives — <code>[move]</code>, <code>[outfit]</code>, <code>[set …]</code> — applied at root creation. One per line. Edits here change the saved <code>state</code> on the active root; re-applying requires a re-seed (Reset to scenario).</p>
+      <label class="stack">
+        <span class="muted small">State directives</span>
+        <textarea id="scenario-state" rows="6" spellcheck="false" placeholder="(none)"></textarea>
+      </label>
+      <div class="editor-actions">
+        <button class="primary small" id="save-scenario-state">Save</button>
+      </div>
+      <p class="status-line small" id="scenario-state-status"></p>
+    </details>
+
+    <details class="side-block side-collapsible" id="modules-section" hidden>
+      <summary><h4>Modules</h4></summary>
+      <p class="muted small">Scenario modifiers active on this branch. Activation and live-editable settings stamp to the active setup root and ride path-replay alongside the rest of branch state — siblings can have a different module mix.</p>
+      <div id="modules-list"></div>
+    </details>
+
+    <details class="side-block side-collapsible" id="applied-edits-section">
+      <summary><h4>Applied edits</h4></summary>
+      <p class="muted small">Every world-state edit on the active path, newest first. Setup edits are tagged <code>setup</code>; narrator-emitted edits are tagged <code>narrator</code>. Click <code>×</code> on a row to revert it.</p>
+      <div id="applied-edits-timeline" class="applied-edits-timeline"></div>
+    </details>
+
+    <details class="side-block side-collapsible" id="narrator-additions-section">
+      <summary><h4>Narrator additions</h4></summary>
+      <p class="muted small">
+        Free-text directives the narrator translates into world-state edits,
+        operating on the active narrator message. Use this to bring an
+        off-cast character into the scene
+        (e.g. <em>"Add Rosa — she's Iris's mom"</em>), establish a
+        relationship without staging the entry
+        (<em>"Make Iris's mom be Rosa"</em>), or rewrite the message
+        with a state change. Off-cast characters are auto-instanced and
+        registered on the cast list. Persists as a sibling rewrite. The
+        per-message <strong>Narrator</strong> button uses the same prompt;
+        this side panel is just a convenience that operates on whatever
+        the active leaf is.
+      </p>
+      <label class="stack">
+        <span class="muted small">Directive</span>
+        <textarea id="narrator-additions-directive" rows="3"
+                  placeholder='e.g. Add Rosa — she&#39;s Iris&#39;s mom.'></textarea>
+      </label>
+      <div class="editor-actions">
+        <button class="primary small" id="send-narrator-addition">Send</button>
+      </div>
+      <p class="status-line small" id="narrator-additions-status"></p>
+    </details>
+
+    <details class="side-block side-collapsible" id="narrator-controls-section">
+      <summary><h4>Narrator controls</h4></summary>
+      <p class="muted small">
+        Limits what off-cast characters the narrator sees + how brand-new
+        characters get materialised. Use these to keep "two guys walk in"
+        from grabbing Ash + Ben Tennyson out of the template roster.
+      </p>
+      <label class="toggle" title="When on, the off-cast roster the narrator sees is narrowed to generic_* templates only (generic_male / generic_nude_male / etc.). Real named characters from the template library are hidden so the narrator can't reach for them when the directive doesn't name them.">
+        <input type="checkbox" id="narrator-control-prefer-generic" />
+        Prefer generic templates
+      </label>
+      <label class="toggle" title="When OFF, the off-cast roster is empty. Narrator can only invent brand-new ids (materialised from a generic template) or use existing in-cast characters. Most restrictive — disables 'Ash walks in' style entries unless the user has already added Ash.">
+        <input type="checkbox" id="narrator-control-allow-off-cast" checked />
+        Allow off-cast pool
+      </label>
+      <label class="stack">
+        <span class="muted small">Off-cast whitelist (comma-separated ids; empty = all allowed by the toggles above)</span>
+        <input type="text" id="narrator-control-whitelist"
+               placeholder="e.g. ash, ben_tennyson" />
+      </label>
+      <label class="stack">
+        <span class="muted small">Custom character data (passed to the narrator as extra context)</span>
+        <textarea id="narrator-control-custom-data" rows="3"
+                  placeholder='e.g. Jake is a baseball player who hates literature. Tom is a poetry student with terrible posture.'></textarea>
+      </label>
+      <label class="stack">
+        <span class="muted small">Default template for invented characters</span>
+        <select id="narrator-control-default-template">
+          <option value="">generic_male (default)</option>
+          <option value="generic_male">generic_male</option>
+          <option value="generic_nude_male">generic_nude_male</option>
+          <option value="generic_female">generic_female</option>
+          <option value="generic_nude_female">generic_nude_female</option>
+        </select>
+      </label>
+      <p class="muted small">Character creation and dialogue-pair rewriting live under Automation → Narrator (Make characters / Make pairs).</p>
+      <p class="status-line small" id="narrator-controls-status"></p>
+    </details>
+
+    <details class="side-block side-collapsible" id="system-prompt-section">
+      <summary><h4>System prompt</h4></summary>
+      <p class="muted small">The instruction template at the top of the system block. Macros: {% raw %}{{user}}, {{char}}, {{random:a,b}}, {{roll:dN}}{% endraw %}. Pre-filled from the scenario / active setup if it provides one; otherwise leave blank for the built-in default.</p>
+      <label class="stack">
+        <span class="muted small">Character mode</span>
+        <textarea id="sys-character" rows="6" placeholder="(default)">{{ conversation.settings.system_prompt_character or '' }}</textarea>
+      </label>
+      <label class="stack">
+        <span class="muted small">Narrator mode</span>
+        <textarea id="sys-narrator" rows="6" placeholder="(default)">{{ conversation.settings.system_prompt_narrator or '' }}</textarea>
+      </label>
+      <div class="editor-actions">
+        <button class="primary small" id="save-sys-prompts">Save</button>
+        <button class="ghost small" id="reset-sys-prompts" title="Drop your overrides and use the built-in defaults.">Built-in defaults</button>
+        <button class="ghost small" id="reset-sys-prompts-scenario" title="Reload the scenario / active-setup values.">Scenario defaults</button>
+      </div>
+      <p class="status-line small" id="sys-prompts-status"></p>
+    </details>
+
+    <details class="side-block side-collapsible" id="banned-phrases-section">
+      <summary><h4>Banned phrases</h4></summary>
+      <p class="muted small">
+        Phrases the model should never use verbatim. Rendered into the
+        system block as a <code>[Style discipline]</code> instruction
+        for both <em>character</em> replies and <em>narrator</em>
+        rewrites. One phrase per line, case-insensitive.
+        <strong>Global</strong> — applies to every conversation.
+      </p>
+      <label class="stack">
+        <span class="muted small">Phrases</span>
+        <textarea id="sidebar-banned-phrases" rows="6"
+                  placeholder="One phrase per line. e.g. shifts her weight"></textarea>
+      </label>
+      <div class="editor-actions">
+        <button class="primary small" id="save-banned-phrases">Save</button>
+      </div>
+      <p class="status-line small" id="banned-phrases-status"></p>
+    </details>
+
+    <details class="side-block side-collapsible" id="author-note-section">
+      <summary><h4>Author's note</h4></summary>
+      <p class="muted small">Persistent guidance injected as a system message N turns from the bottom of the chat each request. Macros: {% raw %}{{user}}, {{char}}, {{random:a,b,c}}, {{roll:dN}}{% endraw %}. Pre-filled from the scenario / active setup if it provides one.</p>
+      <label class="stack">
+        <span class="muted small">Note</span>
+        <textarea id="author-note" rows="3" placeholder="e.g. Keep replies short and atmospheric.">{{ conversation.settings.author_note or '' }}</textarea>
+      </label>
+      <label class="stack">
+        <span class="muted small">Depth (turns from end, 0 = last)</span>
+        <input type="number" id="author-note-depth" min="0" max="10" value="{{ conversation.settings.author_note_depth or 1 }}" />
+      </label>
+      <div class="stack">
+        <span class="muted small">Per-character notes — each applies only on that character's own turn, below the cast-wide note.</span>
+        <div id="author-note-per-character"></div>
+      </div>
+      <div class="editor-actions">
+        <button class="primary small" id="save-author-note">Save</button>
+        <button class="ghost small" id="reset-author-note-scenario" title="Reload the scenario / active-setup author's note.">Scenario default</button>
+      </div>
+      <p class="status-line small" id="author-note-status"></p>
+    </details>
+
+    <details class="side-block side-collapsible" id="summary-section">
+      <summary><h4>Conversation summary</h4></summary>
+      <p class="muted small">Plain-text summary of what's happened so far. Injected as a system block right after the character card / before history. Useful when you've truncated old turns. Macros supported.</p>
+      <textarea id="summary-text" rows="5" placeholder="">{{ conversation.settings.summary or '' }}</textarea>
+      <div class="editor-actions">
+        <button class="ghost small" id="save-summary">Save</button>
+        <button class="ghost small" id="clear-summary" title="Wipe the running summary. Useful after deleting messages whose events the summary already captured.">Clear</button>
+      </div>
+      <p class="status-line small" id="summary-status"></p>
+    </details>
+
+    <details class="side-block side-collapsible" id="post-history-section">
+      <summary><h4>Post-history instructions</h4></summary>
+      <p class="muted small">Final system message appended right before the model's turn. Good for "Reply in two paragraphs" style nudges.</p>
+      <textarea id="post-history" rows="4" placeholder="">{{ conversation.settings.post_history_instructions or '' }}</textarea>
+      <button class="ghost small" id="save-post-history">Save</button>
+      <p class="status-line small" id="post-history-status"></p>
+    </details>
+
+    <details class="side-block side-collapsible" id="display-section">
+      <summary><h4>Display</h4></summary>
+      {% set c = conversation.settings.colors or {} %}
+      <label class="stack">
+        <span class="muted small">Narration</span>
+        <input type="color" id="color-body" value="{{ c.body or '#9b9b96' }}" />
+      </label>
+      <label class="stack">
+        <span class="muted small">Dialogue (quoted)</span>
+        <input type="color" id="color-dialog" value="{{ c.dialog or '#ffffff' }}" />
+      </label>
+      <label class="stack">
+        <span class="muted small">Actions (italic *…*)</span>
+        <input type="color" id="color-action" value="{{ c.action or '#e18a24' }}" />
+      </label>
+      <button class="ghost small" id="reset-colors">Reset to defaults</button>
+    </details>
+
+    <details class="side-block side-collapsible" id="quick-edits-section" open>
+      <summary><h4>Quick edits</h4></summary>
+      <p class="muted small">Raw instance-JSON editing, one row per cast character. These don't touch the templates. Clothing / location / image swaps live on the Cast rows above.</p>
+      <div id="quick-edits"></div>
+    </details>
+
+    <details class="side-block side-collapsible" id="persona-section">
+      <summary><h4>Your persona</h4></summary>
+      <label class="stack">
+        <span class="muted small">Name</span>
+        <input type="text" id="persona-name" placeholder="User"
+          value="{{ effective_user_persona.name if effective_user_persona else (conversation.settings.user_persona.name if conversation.settings.user_persona else '') }}" />
+      </label>
+      <label class="stack">
+        <span class="muted small">Description</span>
+        <textarea id="persona-desc" rows="4" placeholder="Who you are in this scene…">{{ effective_user_persona.description if effective_user_persona else (conversation.settings.user_persona.description if conversation.settings.user_persona else '') }}</textarea>
+      </label>
+      <label class="stack" title="Comma-separated tags describing who you're playing (e.g. mentor, stranger, rival). Context dialogue-pair sets with a matching `user_tag` selector will surface for the cast.">
+        <span class="muted small">Tags (surface matching pairs)</span>
+        <input type="text" id="persona-tags" data-list="comma" placeholder="e.g. dominant, stranger, gentle"
+          value="{{ (effective_user_persona.tags if effective_user_persona and effective_user_persona.tags else (conversation.settings.user_persona.tags if conversation.settings.user_persona and conversation.settings.user_persona.tags else [])) | join(', ') }}" />
+      </label>
+      <button class="ghost small" id="save-persona">Save persona</button>
+      <p class="status-line small" id="persona-status"></p>
+    </details>
+
+    <details class="side-block side-collapsible" id="role-section" hidden>
+      <summary><h4>Role</h4></summary>
+      <p class="muted small">Scene-specific role overlaid on your persona. Your persona stays as you (Alex / whoever); the role is what you're filling in this scenario (Federation liaison, stranger, technician…). Changes take effect on the next turn.</p>
+      <label class="stack">
+        <span class="muted small">Preset</span>
+        <select id="role-preset" class="full">
+          <option value="">— no role —</option>
+        </select>
+      </label>
+      <label class="stack">
+        <span class="muted small">Label</span>
+        <input type="text" id="role-label" placeholder="e.g., Federation liaison" />
+      </label>
+      <label class="stack">
+        <span class="muted small">Description</span>
+        <textarea id="role-desc" rows="4" placeholder="Relationship to the cast, why you're here, anything they should react to."></textarea>
+      </label>
+      <div class="editor-actions">
+        <button class="primary small" id="save-role">Save role</button>
+        <button class="ghost small" id="clear-role" title="Drop the role overlay; your persona stays as-is.">Clear</button>
+      </div>
+      <p class="status-line small" id="role-status"></p>
+    </details>
+
+    <details class="side-block side-collapsible" id="sampling-section">
+      <summary><h4>Sampling</h4></summary>
+      {% set s = conversation.settings.sampling or {} %}
+      <label class="stack">
+        <span class="muted small">Temperature</span>
+        <input type="number" id="samp-temp" step="0.05" min="0" max="2" value="{{ s.temperature if s.temperature is defined else '' }}" placeholder="0.8" />
+      </label>
+      <label class="stack">
+        <span class="muted small">Top-P</span>
+        <input type="number" id="samp-top-p" step="0.01" min="0" max="1" value="{{ s.top_p if s.top_p is defined else '' }}" placeholder="0.95" />
+      </label>
+      <label class="stack">
+        <span class="muted small">Top-K</span>
+        <input type="number" id="samp-top-k" step="1" min="0" value="{{ s.top_k if s.top_k is defined else '' }}" placeholder="40" />
+      </label>
+      <label class="stack">
+        <span class="muted small">Repeat penalty</span>
+        <input type="number" id="samp-repeat" step="0.05" min="0" max="2" value="{{ s.repeat_penalty if s.repeat_penalty is defined else '' }}" placeholder="1.1" />
+      </label>
+      <label class="stack">
+        <span class="muted small">Max tokens (num_predict)</span>
+        <input type="number" id="samp-num-predict" step="32" min="-1" value="{{ s.num_predict if s.num_predict is defined else '' }}" placeholder="512" />
+      </label>
+      <button class="ghost small" id="save-sampling">Save sampling</button>
+      <p class="status-line small" id="sampling-status"></p>
+    </details>
+  </aside>
+
+  <section class="chat-main">
+    <header class="chat-head">
+      <button class="ghost icon" id="show-left" title="Show sidebar" aria-hidden="true">›</button>
+      <div class="chat-title">
+        <a href="{{ url_for('pages.dashboard') }}" class="muted small">← Dashboard</a>
+        <span class="chat-name">{{ conversation.title }}</span>
+      </div>
+      <div class="chat-head-actions">
+        <span class="module-region" data-region="toolbar"></span>
+        <button class="ghost small" id="show-map" title="Toggle map — locations, rooms, who's where">Map</button>
+        <button class="ghost small" id="show-right" title="Toggle library">Library ›</button>
+      </div>
+    </header>
+
+    <div id="messages" class="messages">
+      {# Module slot: chat_above. Lives INSIDE the messages scroll
+         container so position: sticky anchors to the chat scroll.
+         Modules mount via Modules.mount("chat_above", element). Empty
+         by default; height is contributed by mounted content. The
+         fullRender() loop in chat.js preserves this element across
+         path re-renders. #}
+      <div id="slot-chat-above" class="module-slot module-slot-chat-above" data-region="chat-above"></div>
+    </div>
+
+    <form id="composer" class="composer">
+      <div class="composer-bar">
+        <span class="composer-speak" id="composer-speak">
+          <label class="muted small composer-speak-lbl">as
+            <select id="composer-persona-select" class="composer-speak-sel" title="Speak as"></select>
+          </label>
+          <button type="button" id="composer-speak-swap" class="ghost icon composer-speak-swap" title="Swap speak-as / reply-to">⇄</button>
+          <label class="muted small composer-speak-lbl">to
+            <select id="composer-responder-select" class="composer-speak-sel" title="Reply as"></select>
+          </label>
+          <button type="button" id="composer-multi-btn" class="ghost xs composer-multi-btn"
+                  title="Multi responses — pick which NPCs react and in what order">multi ▾</button>
+        </span>
+        {# Token budget readout. Lives on the speak-as bar (not in the
+           action-button row below) so the toggle pills + Generate + Send
+           fit on one line on phones without the ~90px token label pushing
+           Generate/Send off the right edge into the scroll region. #}
+        <span class="muted small composer-tokens" id="composer-tokens"></span>
+        <span class="composer-as muted small" id="composer-as-label" hidden>as User</span>
+        <div id="composer-multi-panel" class="composer-multi-panel" hidden></div>
+      </div>
+      <textarea id="composer-input" rows="3" placeholder="Type a message…  /help for commands"></textarea>
+      <div class="composer-actions">
+        {# The toggle pills + all module-contributed composer controls live in
+           this scroll strip so that, on mobile, when modules pile controls in,
+           they scroll horizontally here INSTEAD of pushing Generate/Send off
+           the row. Generate + Send are siblings AFTER it (pinned right), so
+           they stay in the same place no matter how many modules are active.
+           On desktop the strip is `display: contents` — transparent — so the
+           layout is unchanged. #}
+        <div class="composer-actions-scroll">
+          {# Module slot: composer_left. Compose-time controls (e.g. the
+             texting module's target picker, pf1e's ☰ / ⚔ Actions). #}
+          <span id="slot-composer-left" class="module-slot module-slot-composer-left" data-region="composer-left"></span>
+          <label class="toggle compact" title="Reasoning models (Gemma 4, gpt-oss, …) generate a thinking trace before replying. Off = faster.">
+            <input type="checkbox" id="thinking-toggle"
+              {% if conversation.settings.enable_thinking %}checked{% endif %} />
+            Thinking
+          </label>
+          <label class="toggle compact" title="After each character response, fires a second model call to pick an image from that character's image_pack catalog. Per-conversation override of the global config default.">
+            <input type="checkbox" id="image-pack-toggle"
+              {% if conversation.settings.image_pack_pick %}checked{% endif %} />
+            Image
+          </label>
+          <label class="toggle compact" title="When generating a character response, also have the other characters in the same room react. 1 partner uses a single LLM call (joint); 2+ partners use a second narrator pass to ensure every character speaks.">
+            <input type="checkbox" id="multi-response-toggle"
+              {% if conversation.settings.multi_response %}checked{% endif %} />
+            Multi
+          </label>
+          <label class="toggle compact" id="autoplay-toggle-wrap" hidden
+                 title="Auto Play: after the narrator finishes a turn, automatically advance the lead character on a countdown timer.">
+            <input type="checkbox" id="autoplay-toggle" />
+            <span id="autoplay-label">Auto</span>
+          </label>
+          {# Module slots: composer_toolbar + composer_right (submit-time module
+             actions like pf1e's Grid toggle and the texting module's "Text"). #}
+          <span class="module-region" data-region="composer-toolbar"></span>
+          <span id="slot-composer-right" class="module-slot module-slot-composer-right" data-region="composer-right"></span>
+        </div>
+        <button type="button" id="generate-only" class="ghost">Generate ↻</button>
+        <button type="submit" class="primary">Send</button>
+      </div>
+    </form>
+  </section>
+
+  <aside class="chat-side right" id="right-panel">
+    <header class="side-head">
+      <div class="tabs" id="right-tabs">
+        <button class="tab active" data-tab="chats">Chats</button>
+        <button class="tab" data-tab="scenarios">Scenarios</button>
+        <button class="tab" data-tab="characters">Characters</button>
+        <button class="tab" data-tab="locations">Locations</button>
+        <button class="tab" data-tab="rooms">Rooms</button>
+        <button class="tab" data-tab="objects">Objects</button>
+        <button class="tab" data-tab="outfits">Outfits</button>
+        <button class="tab" data-tab="lore">Lore</button>
+        <button class="tab" data-tab="prompt">Prompt</button>
+        <button class="tab" data-tab="dev">Dev</button>
+      </div>
+      <button class="ghost icon" id="close-right" title="Hide library">×</button>
+    </header>
+    <div class="tab-body" id="tab-body"></div>
+  </aside>
+
+  <aside class="chat-side right" id="map-panel">
+    <header class="side-head">
+      <div class="map-head-title">Map</div>
+      <div class="map-scope" id="map-scope" role="tablist" title="Which locations to list">
+        <button class="map-scope-btn active" data-scope="scenario">Scenario</button>
+        <button class="map-scope-btn" data-scope="all">All</button>
+      </div>
+      <button class="ghost icon" id="close-map" title="Hide map">×</button>
+    </header>
+    <div class="map-search-row">
+      <input type="search" id="map-search" class="map-search" placeholder="Search rooms & locations…" autocomplete="off" />
+    </div>
+    <div class="map-body" id="map-body"></div>
+  </aside>
+</div>
+
+<dialog id="user-persona-dialog">
+  <form method="dialog">
+    <h3>Your persona</h3>
+    <p class="muted small">Shown to characters as {{ '{{user}}' }} / {{ '{{user.description}}' }}. Use the <em>Your persona</em> dropdown above the cast to pick a tagged character; this dialog is for tweaking name and description manually.</p>
+    <label class="stack">
+      <span>Name</span>
+      <input type="text" id="user-persona-name" placeholder="User" />
+    </label>
+    <label class="stack">
+      <span>Description</span>
+      <textarea id="user-persona-description" rows="5" placeholder="A short physical/personality blurb the AI will see."></textarea>
+    </label>
+    <menu>
+      <button value="cancel">Cancel</button>
+      <button value="save" class="primary">Save</button>
+    </menu>
+  </form>
+</dialog>
+
+<dialog id="confirm-dialog">
+  <form method="dialog">
+    <p id="confirm-text">Confirm action?</p>
+    <menu>
+      <button value="cancel">Cancel</button>
+      <button value="ok" class="primary">Confirm</button>
+    </menu>
+  </form>
+</dialog>
+
+<dialog id="edits-dialog">
+  <form method="dialog">
+    <h3>Pending world edits</h3>
+    <p class="muted small">The narrator proposed the following changes. Apply them to the instance?</p>
+    <pre id="edits-text"></pre>
+    <menu>
+      <button value="reject">Reject</button>
+      <button value="accept" class="primary">Apply</button>
+    </menu>
+  </form>
+</dialog>
+
+<dialog id="setup-directive-dialog">
+  <form method="dialog">
+    <h3>Setup from directive</h3>
+    <p class="muted small">
+      Describe how you want the new branch to start — characters' outfits, locations, your role, the time of day, anything. The narrator translates it into world-state edits + an opening line. The result becomes a new sibling setup you can switch to from the root branch arrows.
+    </p>
+    <label class="stack">
+      <span class="muted small">Directive</span>
+      <textarea id="setup-directive-text" rows="5" placeholder="e.g. Today is feature day. Iris and Dex in casual clothes, on the shop floor. I'm from the local paper, here to take their portrait."></textarea>
+    </label>
+    <p class="muted small" id="setup-directive-status" style="min-height: 1.2em;"></p>
+    <menu>
+      <button value="cancel">Cancel</button>
+      <button value="ok" class="primary" id="setup-directive-submit">Generate setup</button>
+    </menu>
+  </form>
+</dialog>
+
+<dialog id="instance-editor-dialog" class="instance-editor">
+  <form method="dialog">
+    <h3 id="instance-editor-title">Edit instance entity</h3>
+    <p class="muted small">Edits here only affect this conversation. The template under <code>data/</code> is untouched.</p>
+    <textarea id="instance-editor-text" rows="22" spellcheck="false"></textarea>
+    <p class="muted small status-line" id="instance-editor-status"></p>
+    <menu>
+      <button value="cancel">Cancel</button>
+      <button value="save" class="primary">Save</button>
+    </menu>
+  </form>
+</dialog>
+{% endblock %}
+{% block scripts %}
+<script>
+  window.GEMMASIM_INITIAL = {
+    conversation: {{ conversation | tojson }},
+    entities: {{ entities | tojson }},
+    config: {{ client_config | tojson }},
+    user_personas: {{ user_personas | tojson }},
+    global_outfits: {{ global_outfits | tojson }},
+    global_objects: {{ global_objects | tojson }},
+    global_rooms: {{ global_rooms | tojson }},
+    effective_cast: {{ effective_cast | tojson }},
+    effective_user_persona: {{ effective_user_persona | tojson }},
+    default_responder: {{ default_responder | tojson }},
+    active_setup_root_id: {{ active_setup_root_id | tojson }},
+    scenario_baseline_cast: {{ scenario_baseline_cast | tojson }},
+    module_manifests: {{ module_manifests | tojson }},
+    module_assets: {{ module_assets | tojson }},
+    active_module_ids: {{ active_module_ids | tojson }},
+    prefab_assets: {{ prefab_assets | tojson }}
+  };
+</script>
+{# Module CSS files. Loaded for every discovered module regardless
+   of active state — the stylesheet just sits inert until the
+   module's JS mounts something into a slot. Auto-served by
+   /modules/<id>/static/<id>.css via the modules blueprint. #}
+{% for asset in module_assets %}
+  {% if asset.css_url %}
+    <link rel="stylesheet" href="{{ asset.css_url }}" data-module-id="{{ asset.id }}">
+  {% endif %}
+{% endfor %}
+{# Prefab CSS — same inert-until-used loading as module CSS. #}
+{% for asset in prefab_assets %}
+  {% if asset.css_url %}
+    <link rel="stylesheet" href="{{ asset.css_url }}" data-prefab-id="{{ asset.id }}">
+  {% endif %}
+{% endfor %}
+<script src="{{ asset('js/panel_forms.js') }}"></script>
+<script src="{{ asset('js/library.js') }}"></script>
+<script src="{{ asset('js/chat.js') }}"></script>
+<script src="{{ asset('js/map.js') }}"></script>
+{# Module JS files. Loaded AFTER chat.js so window.Modules exists
+   when the module code runs. Each module's init code uses the
+   namespace to mount slots / hook events. Order is insertion order
+   of all_manifests (alphabetical by id today). #}
+{% for asset in module_assets %}
+  {% if asset.js_url %}
+    <script src="{{ asset.js_url }}" data-module-id="{{ asset.id }}"></script>
+  {% endif %}
+{% endfor %}
+{# Prefab JS — loaded AFTER chat.js so window.Prefabs exists when a
+   drop-in's prefab.js calls Prefabs.registerKind at load. #}
+{% for asset in prefab_assets %}
+  {% if asset.js_url %}
+    <script src="{{ asset.js_url }}" data-prefab-id="{{ asset.id }}"></script>
+  {% endif %}
+{% endfor %}
+{% endblock %}

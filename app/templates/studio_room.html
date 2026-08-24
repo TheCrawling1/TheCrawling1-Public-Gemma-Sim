@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ entity.name if entity else 'New room' }} — GemmaSim{% endblock %}
+{% block body_class %}studio-body editor-body{% endblock %}
+{% block head %}
+  <script id="entity-data" type="application/json">{{ entity|tojson if entity else 'null' }}</script>
+  <script id="entity-type" type="text/plain">room</script>
+  <script id="entity-is-new" type="text/plain">{{ 'true' if is_new else 'false' }}</script>
+{% endblock %}
+{% block content %}
+<section class="page-head editor-head">
+  <div>
+    <p class="muted small"><a href="{{ url_for('pages.studio') }}">← Studio</a></p>
+    <h1>{{ entity.name if entity else 'New room' }}</h1>
+    <p class="muted small">{{ entity.id if entity else '' }}</p>
+  </div>
+  <div class="page-head-actions">
+    <span id="editor-status" class="muted small"></span>
+    <button class="ghost" id="delete-entity">Delete</button>
+    <button class="primary" id="save-entity">Save</button>
+  </div>
+</section>
+
+<nav class="editor-tabs">
+  <a href="#" data-tab="form" class="active">Sheet</a>
+  <a href="#" data-tab="json">JSON source</a>
+</nav>
+
+<form class="editor-form" id="editor-form" autocomplete="off">
+
+<div data-panel="form">
+  <div class="editor-grid">
+    <section class="editor-card span-2">
+      <h3>Identity</h3>
+      <label class="stack"><span>ID</span>
+        <input type="text" data-field="id" {% if not is_new %}readonly{% endif %} /></label>
+      <label class="stack"><span>Name</span>
+        <input type="text" data-field="name" /></label>
+      <label class="stack"><span>Tags</span>
+        <input type="text" data-field="tags" data-list="comma" /></label>
+      <label class="stack"><span>Description</span>
+        <textarea rows="6" data-field="description"></textarea></label>
+      <label class="stack"><span>Example text</span>
+        <textarea rows="3" data-field="example_text"></textarea></label>
+    </section>
+
+    <section class="editor-card">
+      <h3>Properties</h3>
+      <label class="stack"><span>Size</span>
+        <input type="text" data-field="properties.size" placeholder="small / medium / large" /></label>
+      <label class="stack"><span>Lighting</span>
+        <input type="text" data-field="properties.lighting" /></label>
+      <label class="stack"><span>Exits <span class="muted small">(comma separated room ids)</span></span>
+        <input type="text" data-field="properties.exits" data-list="comma" /></label>
+    </section>
+  </div>
+</div>
+
+<div data-panel="json" style="display: none;">
+  <section class="editor-card">
+    <h3>JSON source</h3>
+    <textarea id="entity-json" class="json-textarea" rows="30" spellcheck="false"></textarea>
+  </section>
+</div>
+
+</form>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/studio_generic.js') }}"></script>
+<script>window.STUDIO_DEFAULT_TYPE = 'room';</script>
+{% endblock %}

@@ -1,0 +1,20 @@
+{
+  "id": "marginalia_counter",
+  "type": "room",
+  "name": "Café Counter",
+  "description": "The café counter at the back of the shop: a temperamental espresso machine, a glass case with a few pastries, a chalkboard menu half-erased, and the shop ledger open beside the till. Two small tables sit within arm's reach of the warmth of the machine. This is Iris's home turf.",
+  "tags": [
+    "interior",
+    "cafe"
+  ],
+  "example_text": "Café counter: espresso machine, pastry case, chalkboard menu, the till and shop ledger, two small tables.",
+  "children": [],
+  "properties": {
+    "size": "small",
+    "lighting": "warm, close, the amber glow of a counter lamp",
+    "exits": [
+      "marginalia_floor",
+      "marginalia_office"
+    ]
+  }
+}

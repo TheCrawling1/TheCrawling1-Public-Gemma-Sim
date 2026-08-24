@@ -1,0 +1,17 @@
+{
+  "id": "hungover",
+  "type": "state",
+  "name": "Hungover",
+  "description": "Generic morning-after state. Apply with [state <char> -> hungover]. Layers headache, nausea and light-sensitivity onto the character; overlays append to existing anatomy prose.",
+  "tags": ["state", "generic", "ailment"],
+  "example_text": "",
+  "children": [],
+  "properties": {
+    "affect_summary": "Hungover — pounding head, queasy stomach, raw and irritable. Light and noise are unwelcome; everything takes more effort than it should.",
+    "mannerism_overlay": "Winces at bright light and loud sounds, pinches the bridge of her nose, moves carefully to avoid jostling her head, snaps shorter than usual.",
+    "body_overlays": {
+      "head": "Her face is pale and drawn, eyes squinted against the light with dark smudges of fatigue beneath them; she keeps pressing fingertips to her temple.",
+      "midriff": "Her stomach is uneasy, a hand drifting to it now and then as nausea rolls through."
+    }
+  }
+}

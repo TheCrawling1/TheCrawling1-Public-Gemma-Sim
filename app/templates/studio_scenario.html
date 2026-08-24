@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}{{ entity.name if entity else 'New scenario' }} — GemmaSim{% endblock %}
+{% block body_class %}studio-body editor-body{% endblock %}
+{% block head %}
+  <script id="entity-data" type="application/json">{{ entity|tojson if entity else 'null' }}</script>
+  <script id="entity-type" type="text/plain">scenario</script>
+  <script id="entity-is-new" type="text/plain">{{ 'true' if is_new else 'false' }}</script>
+  <script id="all-characters" type="application/json">{{ all_characters|tojson }}</script>
+  <script id="all-locations" type="application/json">{{ all_locations|tojson }}</script>
+  <script id="all-rooms" type="application/json">{{ all_rooms|tojson }}</script>
+  <script id="all-outfits" type="application/json">{{ all_outfits|tojson }}</script>
+{% endblock %}
+{% block content %}
+<section class="page-head editor-head">
+  <div>
+    <p class="muted small"><a href="{{ url_for('pages.studio') }}">← Studio</a></p>
+    <h1>{{ entity.name if entity else 'New scenario' }}</h1>
+    <p class="muted small">{{ entity.id if entity else '' }}</p>
+  </div>
+  <div class="page-head-actions">
+    <span id="editor-status" class="muted small"></span>
+    <button class="ghost" id="delete-entity">Delete</button>
+    <button class="primary" id="save-entity">Save</button>
+  </div>
+</section>
+
+<nav class="editor-tabs">
+  <a href="#" data-tab="form" class="active">Overview</a>
+  <a href="#" data-tab="cast">Cast</a>
+  <a href="#" data-tab="opening">Opening</a>
+  <a href="#" data-tab="setups">Setups</a>
+  <a href="#" data-tab="json">JSON source</a>
+</nav>
+
+<form class="editor-form" id="editor-form" autocomplete="off">
+
+<div data-panel="form">
+  <div class="editor-grid">
+    <section class="editor-card span-2">
+      <h3>Identity</h3>
+      <label class="stack"><span>ID</span>
+        <input type="text" data-field="id" {% if not is_new %}readonly{% endif %} /></label>
+      <label class="stack"><span>Name</span>
+        <input type="text" data-field="name" /></label>
+      <label class="stack"><span>Tags</span>
+        <input type="text" data-field="tags" data-list="comma" /></label>
+      <label class="stack"><span>Description</span>
+        <textarea rows="4" data-field="description"></textarea></label>
+      <label class="stack"><span>Example text</span>
+        <textarea rows="2" data-field="example_text"></textarea></label>
+    </section>
+
+    <section class="editor-card">
+      <h3>Locations</h3>
+      <p class="muted small">Locations whose entire room set is available in this scenario.</p>
+      <ul class="checklist" id="location-checklist">
+        {% for l in all_locations %}
+          <li><label><input type="checkbox" data-scenario-location="{{ l.id }}" /> {{ l.name or l.id }}</label></li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="editor-card">
+      <h3>Modes</h3>
+      <label class="stack"><span>Turn mode</span>
+        <select data-field="turn_mode">
+          <option value="manual">manual</option>
+          <option value="rotating">rotating</option>
+          <option value="scenario">scenario</option>
+        </select>
+      </label>
+      <label class="stack"><span>Narrator mode</span>
+        <select data-field="narrator_mode">
+          <option value="auto">auto</option>
+          <option value="manual">manual</option>
+          <option value="off">off</option>
+        </select>
+      </label>
+      <label class="stack"><span>Context limit (tokens)</span>
+        <input type="number" data-field="context_limit_tokens" data-coerce="number" /></label>
+    </section>
+  </div>
+</div>
+
+<div data-panel="cast" style="display: none;">
+  <section class="editor-card">
+    <h3>Cast</h3>
+    <p class="muted small">Each character can have a starting location, room, outfit, and a custom first message just for this scenario.</p>
+    <div id="cast-list"></div>
+    <div class="row gap">
+      <select id="add-cast-select">
+        <option value="">— add character —</option>
+        {% for c in all_characters %}<option value="{{ c.id }}">{{ c.name or c.id }}</option>{% endfor %}
+      </select>
+      <button type="button" class="ghost small" id="add-cast">Add to cast</button>
+    </div>
+  </section>
+
+  <section class="editor-card">
+    <h3>Custom outfits</h3>
+    <p class="muted small">Outfits authored inline that exist only in this scenario's instance — handy for "the school uniform but with a hat" without polluting the base library.</p>
+    <ul id="custom-outfits"></ul>
+    <div class="row gap">
+      <input type="text" id="new-custom-outfit-id" placeholder="custom outfit id" />
+      <button type="button" class="ghost small" id="add-custom-outfit">+ Add empty outfit</button>
+    </div>
+  </section>
+</div>
+
+<div data-panel="opening" style="display: none;">
+  <div class="editor-grid">
+    <section class="editor-card span-2">
+      <h3>Opening narration</h3>
+      <p class="muted small">The narrator's root message. Set the scene before anyone speaks.</p>
+      <textarea rows="6" data-field="opening_prompt"></textarea>
+    </section>
+
+    <section class="editor-card span-2">
+      <h3>Scenario instructions</h3>
+      <p class="muted small">Appended to the system block for every prompt in this scenario. Use this to set tone, ground rules, or per-scene quirks (e.g. "Milo is silent in this scene").</p>
+      <textarea rows="6" data-field="scenario_instructions"></textarea>
+    </section>
+
+    <section class="editor-card span-2">
+      <h3>First messages <span class="muted small">(per character; overrides their default)</span></h3>
+      <div id="first-messages-list"></div>
+      <p class="muted small">Add a character on the Cast tab to give them a custom first message here.</p>
+    </section>
+  </div>
+</div>
+
+<div data-panel="setups" style="display: none;">
+  <section class="editor-card">
+    <h3>Setups</h3>
+    <p class="muted small">Branchable pre-prompts. Each setup seeds the scene differently — where characters are, who the user is, and the root narrator's opening line. The first setup is the active root by default; the rest become sibling root branches the user can switch to from the chat. The fields on the <strong>Opening</strong> tab act as the "Default" setup if no setups are listed here.</p>
+    <p class="muted small"><strong>State syntax</strong> (one directive per line, same as the narrator-edit grammar):<br>
+    <code>[move &lt;character_id&gt; -&gt; &lt;room_id&gt;]</code> · <code>[outfit &lt;character_id&gt; -&gt; &lt;outfit_id&gt;]</code> · <code>[set &lt;entity_id&gt;.&lt;dotted.path&gt; = &lt;value&gt;]</code> · <code>[set user.role = "producer"]</code>
+    </p>
+    <div id="setups-list"></div>
+    <div class="row gap">
+      <input type="text" id="new-setup-id" placeholder="setup id (snake_case)" />
+      <button type="button" class="ghost small" id="add-setup">+ Add setup</button>
+    </div>
+  </section>
+</div>
+
+<div data-panel="json" style="display: none;">
+  <section class="editor-card">
+    <h3>JSON source</h3>
+    <textarea id="entity-json" class="json-textarea" rows="30" spellcheck="false"></textarea>
+  </section>
+</div>
+
+</form>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/studio_scenario.js') }}"></script>
+{% endblock %}

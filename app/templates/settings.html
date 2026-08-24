@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% block title %}Settings — GemmaSim{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1>Settings</h1>
+    <p class="muted">Configure how GemmaSim talks to Ollama and the global defaults applied to new conversations.</p>
+  </div>
+</section>
+
+<section class="section">
+  <header class="section-head"><h2>Ollama backend</h2></header>
+  <div class="card form-card">
+    <div class="form-row">
+      <label for="ollama-host">Host URL</label>
+      <input type="url" id="ollama-host" placeholder="http://127.0.0.1:11434" />
+      <p class="muted small">The base URL of your Ollama server. The default port is 11434.</p>
+    </div>
+    <div class="form-row">
+      <label for="ollama-model">Model</label>
+      <div class="inline">
+        <select id="ollama-model"></select>
+        <button class="ghost" type="button" id="refresh-models">Refresh</button>
+      </div>
+      <p class="muted small">Pull a model with <code>ollama pull &lt;name&gt;</code> first; it will then appear in this list.</p>
+    </div>
+    <div class="form-row">
+      <label for="ollama-temperature">Temperature</label>
+      <input type="number" id="ollama-temperature" step="0.05" min="0" max="2" />
+    </div>
+    <div class="form-row">
+      <label for="ollama-top-p">Top-p</label>
+      <input type="number" id="ollama-top-p" step="0.01" min="0" max="1" />
+    </div>
+    <div class="form-actions">
+      <button class="ghost" type="button" id="test-connection">Test connection</button>
+      <button class="primary" type="button" id="save-settings">Save</button>
+      <span id="settings-status" class="status-line"></span>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <header class="section-head"><h2>Per-model sampling profiles</h2></header>
+  <p class="muted small">Each model gets its own defaults. Per-conversation overrides (set in the chat sidebar) win over these.</p>
+  <div class="card form-card">
+    <div class="form-row">
+      <label for="profile-model">Model</label>
+      <div class="inline">
+        <select id="profile-model"></select>
+        <button class="ghost" type="button" id="profile-load">Load</button>
+        <button class="ghost" type="button" id="profile-clear">Reset to model defaults</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <label for="profile-temp">Temperature</label>
+      <input type="number" id="profile-temp" step="0.05" min="0" max="2" placeholder="0.8" />
+    </div>
+    <div class="form-row">
+      <label for="profile-top-p">Top-P</label>
+      <input type="number" id="profile-top-p" step="0.01" min="0" max="1" placeholder="0.95" />
+    </div>
+    <div class="form-row">
+      <label for="profile-top-k">Top-K</label>
+      <input type="number" id="profile-top-k" step="1" min="0" placeholder="40" />
+    </div>
+    <div class="form-row">
+      <label for="profile-repeat">Repeat penalty</label>
+      <input type="number" id="profile-repeat" step="0.05" min="0" max="2" placeholder="1.1" />
+      <p class="muted small">Penalize tokens recently seen. Ollama default 1.1.</p>
+    </div>
+    <div class="form-row">
+      <label for="profile-presence">Presence penalty</label>
+      <input type="number" id="profile-presence" step="0.05" min="-2" max="2" placeholder="0.4" />
+      <p class="muted small">Pushes toward new topics / vocab. 0 = off.</p>
+    </div>
+    <div class="form-row">
+      <label for="profile-frequency">Frequency penalty</label>
+      <input type="number" id="profile-frequency" step="0.05" min="-2" max="2" placeholder="0.4" />
+      <p class="muted small">Penalize repeats by frequency. 0 = off.</p>
+    </div>
+    <div class="form-row">
+      <label for="profile-num-ctx">Context window (num_ctx)</label>
+      <input type="number" id="profile-num-ctx" step="512" min="512" placeholder="model default" />
+    </div>
+    <div class="form-row">
+      <label for="profile-num-predict">Max tokens (num_predict)</label>
+      <input type="number" id="profile-num-predict" step="32" min="-1" placeholder="-1 = until done" />
+    </div>
+    <div class="form-actions">
+      <button class="primary" type="button" id="profile-save">Save profile</button>
+      <span id="profile-status" class="status-line"></span>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <header class="section-head"><h2>Defaults for new conversations</h2></header>
+  <div class="card form-card">
+    <div class="form-row">
+      <label for="default-context-limit">Context limit (tokens)</label>
+      <input type="number" id="default-context-limit" step="256" min="1024" />
+    </div>
+    <div class="form-row">
+      <label for="default-narrator-mode">Narrator mode</label>
+      <select id="default-narrator-mode">
+        <option value="auto">auto — narrator runs after each character turn</option>
+        <option value="manual">manual — only when invoked</option>
+        <option value="off">off — never auto-run</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="default-turn-mode">Turn mode</label>
+      <select id="default-turn-mode">
+        <option value="manual">manual — user picks the responder each turn</option>
+        <option value="rotating">rotating — cycle through scenario characters</option>
+        <option value="scenario">scenario — scenario chooses</option>
+      </select>
+    </div>
+    <div class="form-row checkbox">
+      <label><input type="checkbox" id="default-locational" /> Locational memory on by default</label>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <header class="section-head"><h2>Network access</h2></header>
+  <p class="muted small">
+    Restrict who can reach this instance. Loopback (<code>127.0.0.1</code>,
+    <code>::1</code>) is always allowed. Empty list = no restriction beyond
+    whatever the host bind already enforces.
+    <br />
+    <strong>Listening on the LAN:</strong> the bind host lives in
+    <code>config.local.json</code> (a private file already in
+    <code>.gitignore</code>). Default is <code>127.0.0.1</code>
+    (localhost only). Set <code>"host": "0.0.0.0"</code> there to accept
+    LAN traffic — and add the IPs that should reach you to the allowlist
+    below. Restart the server after changing the host.
+  </p>
+  <div class="card form-card">
+    <div class="form-row">
+      <label>Currently bound to</label>
+      <code id="network-current-bind">…</code>
+      <p class="muted small">Read-only. Edit <code>host</code> / <code>port</code> in <code>config.local.json</code> and restart.</p>
+    </div>
+    <div class="form-row">
+      <label for="allowed-ips">Allowed IPs</label>
+      <textarea id="allowed-ips" rows="6"
+                placeholder="One IP or CIDR range per line. e.g.&#10;192.168.1.42&#10;10.0.0.0/24&#10;fe80::1"></textarea>
+      <p class="muted small">
+        IPv4 / IPv6 addresses or CIDR ranges (e.g. <code>192.168.1.0/24</code>),
+        one per line. Loopback is implicit.
+      </p>
+    </div>
+    <div class="form-row">
+      <label class="toggle">
+        <input type="checkbox" id="trust-proxy" />
+        Trust X-Forwarded-For header
+      </label>
+      <p class="muted small">
+        Only enable when sitting behind a reverse proxy you control
+        (nginx, Caddy, Traefik). The first hop of <code>X-Forwarded-For</code>
+        is matched against the allowlist instead of the direct peer.
+      </p>
+    </div>
+    <div class="form-actions">
+      <button class="primary" type="button" id="network-save">Save</button>
+      <span id="network-status" class="status-line"></span>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <header class="section-head"><h2>Layered editor colors</h2></header>
+  <p class="muted small">Tints fields in the right-panel editor by which layer their value comes from. Saves to localStorage; refresh chat after changing.</p>
+  <div class="card form-card">
+    <div class="form-row">
+      <label for="color-template">Template (default)</label>
+      <input type="color" id="color-template" />
+    </div>
+    <div class="form-row">
+      <label for="color-scenario">Scenario override</label>
+      <input type="color" id="color-scenario" />
+    </div>
+    <div class="form-row">
+      <label for="color-instance">Conversation instance</label>
+      <input type="color" id="color-instance" />
+    </div>
+    <div class="form-row">
+      <label for="color-unset">Unset (removed at higher layer)</label>
+      <input type="color" id="color-unset" />
+    </div>
+    <div class="form-actions">
+      <button class="ghost" type="button" id="layer-colors-reset">Reset to defaults</button>
+      <button class="primary" type="button" id="layer-colors-save">Save</button>
+      <span id="layer-colors-status" class="status-line"></span>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <header class="section-head"><h2>Update &amp; restart</h2></header>
+  <div class="card form-card">
+    <p class="muted small">Pull the latest from <code>origin</code> and restart the server so new code takes effect. The page reconnects automatically once it's back up.</p>
+    <div class="form-row">
+      <label class="toggle">
+        <input type="checkbox" id="allow-remote-admin" />
+        Allow update from other devices (mobile)
+      </label>
+      <p class="muted small">
+        Off by default, this button only works from the machine running the server.
+        Turn this on to run it from your phone or another device on your network.
+        It lets any signed-in device pull code and restart the server, so only enable
+        it if you trust everyone who can log in. <span id="allow-remote-status" class="status-line"></span>
+      </p>
+    </div>
+    <div class="form-actions">
+      <button class="primary" type="button" id="pull-restart">Pull &amp; restart</button>
+      <span id="pull-restart-status" class="status-line"></span>
+    </div>
+    <pre id="pull-restart-output" class="muted small" style="white-space:pre-wrap;margin-top:8px;max-height:180px;overflow:auto;"></pre>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+<script>
+(function () {
+  const btn = document.getElementById("pull-restart");
+  const status = document.getElementById("pull-restart-status");
+  const out = document.getElementById("pull-restart-output");
+  if (!btn) return;
+
+  // "Allow update from other devices" toggle — persists network.allow_remote_admin
+  // (takes effect live, no restart), so the button below works from mobile.
+  const remoteToggle = document.getElementById("allow-remote-admin");
+  const remoteStatus = document.getElementById("allow-remote-status");
+  if (remoteToggle) {
+    fetch("/api/settings", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((s) => { remoteToggle.checked = !!((s.network || {}).allow_remote_admin); })
+      .catch(() => {});
+    remoteToggle.addEventListener("change", async () => {
+      remoteStatus.textContent = "Saving…";
+      try {
+        const r = await fetch("/api/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ network: { allow_remote_admin: remoteToggle.checked } }),
+        });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        remoteStatus.textContent = remoteToggle.checked
+          ? "On — you can update from this device."
+          : "Off — update only from the server machine.";
+      } catch (e) {
+        remoteStatus.textContent = "Couldn't save: " + e.message;
+        remoteToggle.checked = !remoteToggle.checked;   // revert on failure
+      }
+    });
+  }
+
+  async function ping() {
+    try {
+      const r = await fetch("/api/admin/ping", { cache: "no-store" });
+      return r.ok;
+    } catch (_) { return false; }
+  }
+
+  async function waitForBack() {
+    // Let the old process die, then poll the new one until it answers.
+    for (let i = 0; i < 120; i++) {
+      await new Promise((r) => setTimeout(r, 1000));
+      if (await ping()) {
+        status.textContent = "Back up — reloading…";
+        setTimeout(() => location.reload(), 600);
+        return;
+      }
+      status.textContent = "Restarting… (" + (i + 1) + "s)";
+    }
+    status.textContent = "Server didn't come back — restart it manually.";
+  }
+
+  btn.addEventListener("click", async () => {
+    if (!confirm("Pull origin and restart the server?")) return;
+    btn.disabled = true;
+    out.textContent = "";
+    status.textContent = "Pulling…";
+    try {
+      const r = await fetch("/api/admin/pull_restart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (r.status === 403) {
+        // Blocked because remote update is off — surface it instead of hanging on
+        // a restart that will never come.
+        const data = await r.json().catch(() => ({}));
+        status.textContent = "Update from this device is turned off.";
+        out.textContent = data.message ||
+          "Enable “Allow update from other devices” above, then try again.";
+        btn.disabled = false;
+        if (remoteToggle) remoteToggle.focus();
+        return;
+      }
+      const data = await r.json();
+      out.textContent =
+        (data.branch ? "origin/" + data.branch + "\n" : "") + (data.output || "");
+      status.textContent =
+        (data.pull_ok ? "Pulled. " : "Pull failed (restarting anyway). ") + "Restarting…";
+      waitForBack();
+    } catch (e) {
+      // The restart can cut the POST connection before it responds — expected.
+      status.textContent = "Restarting…";
+      waitForBack();
+    }
+  });
+})();
+</script>
+{% endblock %}

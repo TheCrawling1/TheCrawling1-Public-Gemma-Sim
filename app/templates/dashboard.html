@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — GemmaSim{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1>Dashboard</h1>
+    <p class="muted">Pick a scenario to start a new conversation, or jump back into one in progress. The Ollama backend status is shown in the top bar.</p>
+  </div>
+</section>
+
+<section class="section">
+  <header class="section-head">
+    <h2>Scenarios</h2>
+    <a class="muted small" href="{{ url_for('pages.studio') }}">Build a new one →</a>
+  </header>
+  {% if scenarios %}
+    <div class="card-grid">
+      {% for s in scenarios %}
+        <article class="card scenario-card">
+          <header>
+            <h3>{{ s.name or s.id }}</h3>
+            {% if s.tags %}<div class="tags">{% for t in s.tags %}<span class="tag">{{ t }}</span>{% endfor %}</div>{% endif %}
+          </header>
+          <p class="card-body">{{ s.description or '' }}</p>
+          <footer>
+            <span class="muted small">{{ (s.characters or [])|length }} character{{ '' if (s.characters or [])|length == 1 else 's' }} · {{ (s.locations or [])|length }} location{{ '' if (s.locations or [])|length == 1 else 's' }}</span>
+            <button class="primary" data-start-scenario="{{ s.id }}">Start →</button>
+          </footer>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="muted">No scenarios yet. Build one in the <a href="{{ url_for('pages.studio') }}">Studio</a>.</p>
+  {% endif %}
+</section>
+
+<section class="section">
+  <header class="section-head"><h2>Recent conversations</h2></header>
+  {% if conversations %}
+    <ul class="conv-list">
+      {% for c in conversations %}
+        <li class="conv-row">
+          <a class="conv-link" href="{{ url_for('pages.chat', conversation_id=c.id) }}">
+            <span class="conv-title">{{ c.title }}</span>
+            <span class="conv-meta muted small">{{ c.message_count }} message{{ '' if c.message_count == 1 else 's' }}</span>
+          </a>
+          <button class="ghost small" data-delete-conversation="{{ c.id }}">Delete</button>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted">No conversations yet — start one above.</p>
+  {% endif %}
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

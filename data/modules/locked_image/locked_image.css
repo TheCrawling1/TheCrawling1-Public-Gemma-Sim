@@ -1,0 +1,53 @@
+/* Locked image module — sticky image frame above chat scroll.
+   Frame fills the chat column width and most of the visible viewport
+   height; chat scrolls underneath. No text overlays — the image is
+   the whole surface. */
+
+.locked-image-frame {
+  /* Engine slot above does the sticky anchoring. Frame width matches
+     the chat column edge-to-edge — no side bars. Capped at 50vh so
+     the bottom 50% of the viewport stays for text chat (≈ a third
+     more chat space than the previous 33vh). Overflow:hidden clips
+     ultra-tall portrait images at the bottom — the top of the image
+     is what stays visible. */
+  position: relative;
+  width: 100%;
+  max-height: 50vh;
+  background: var(--bg-alt, #111);
+  border-bottom: 1px solid var(--border, #333);
+  overflow: hidden;
+  display: block;
+}
+
+.locked-image-img {
+  /* Edge-to-edge: width fills the chat column. Height follows the
+     image's natural aspect ratio; the frame's overflow:hidden caps
+     the visible area at 50vh by clipping the bottom of taller
+     images. No object-fit — that would either letterbox (contain)
+     or crop centrally (cover) which loses the top alignment we
+     want here. */
+  width: 100%;
+  height: auto;
+  display: block;
+  transition: opacity 120ms ease;
+}
+
+/* When the module is active, the locked frame IS the image surface
+   for the conversation — the inline per-message image_pack_pick
+   block shown next to each message body would just duplicate the
+   same picture. Hide them. The class is added by locked_image.js
+   on the messages container at mount time. */
+.messages.locked-image-active .msg-image-pack,
+.messages.locked-image-active .msg-stat-image-row .msg-image-pack {
+  display: none;
+}
+
+/* Mobile / narrow viewports: shrink the frame so it doesn't eat the
+   whole chat column. Below 600px wide we cap the height regardless
+   of the height setting. */
+
+@media (max-width: 600px) {
+  .locked-image-frame {
+    max-height: 40vh;
+  }
+}

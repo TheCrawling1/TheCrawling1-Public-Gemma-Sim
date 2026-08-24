@@ -1,0 +1,17 @@
+{
+  "id": "drunk",
+  "type": "state",
+  "name": "Drunk",
+  "description": "Generic intoxication state. Apply with [state <char> -> drunk]. Layers a tipsy/drunk affect and loose physicality onto whoever wears it; body overlays append to the character's own anatomy prose, so their canonical look is preserved underneath.",
+  "tags": ["state", "generic", "intoxication"],
+  "example_text": "",
+  "children": [],
+  "properties": {
+    "affect_summary": "Drunk — several drinks past where she meant to stop. Judgment loosened, inhibitions down, mood warm and unsteady; words come a beat slow and a touch too honest.",
+    "mannerism_overlay": "Over-corrects small movements, leans into people and furniture for balance, laughs a little too easily, loses her thread mid-sentence.",
+    "body_overlays": {
+      "head": "Her face is flushed warm, eyes glassy and half-lidded with a loose unfocused shine; her cheeks carry a drink-bright color.",
+      "legs": "Her stance is unsteady, weight shifting as if the floor tilts; her steps land slightly over-corrected."
+    }
+  }
+}

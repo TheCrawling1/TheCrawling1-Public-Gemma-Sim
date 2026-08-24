@@ -1,0 +1,20 @@
+{
+  "id": "marginalia_floor",
+  "type": "room",
+  "name": "Shop Floor",
+  "description": "The main floor of the shop: tall mismatched shelves packed two-deep, a rolling ladder on a brass rail, and a front display table Iris rearranges by mood. A fogged front window looks out on the wet street; the welcome mat by the door is permanently damp. Narrow aisles wind back toward the café counter.",
+  "tags": [
+    "interior",
+    "shop"
+  ],
+  "example_text": "Bookshop floor: leaning shelves, a rolling ladder, a front display table, a fogged street window.",
+  "children": [],
+  "properties": {
+    "size": "medium",
+    "lighting": "warm overhead lamps and grey daylight from the front window",
+    "exits": [
+      "marginalia_counter",
+      "marginalia_nook"
+    ]
+  }
+}

@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}{{ entity.name if entity else 'New outfit' }} — GemmaSim{% endblock %}
+{% block body_class %}studio-body editor-body{% endblock %}
+{% block head %}
+  <script id="entity-data" type="application/json">{{ entity|tojson if entity else 'null' }}</script>
+  <script id="entity-type" type="text/plain">outfit</script>
+  <script id="entity-is-new" type="text/plain">{{ 'true' if is_new else 'false' }}</script>
+  <script id="clothing-catalog" type="application/json">{{ all_clothing|tojson }}</script>
+{% endblock %}
+{% block content %}
+<section class="page-head editor-head">
+  <div>
+    <p class="muted small"><a href="{{ url_for('pages.studio') }}">← Studio</a></p>
+    <h1>{{ entity.name if entity else 'New outfit' }}</h1>
+    <p class="muted small">{{ entity.id if entity else '' }}</p>
+  </div>
+  <div class="page-head-actions">
+    <span id="editor-status" class="muted small"></span>
+    <button class="ghost" id="delete-entity">Delete</button>
+    <button class="primary" id="save-entity">Save</button>
+  </div>
+</section>
+
+<nav class="editor-tabs">
+  <a href="#" data-tab="form" class="active">Sheet</a>
+  <a href="#" data-tab="json">JSON source</a>
+</nav>
+
+<form class="editor-form" id="editor-form" autocomplete="off">
+
+<div data-panel="form">
+  <div class="editor-grid">
+    <section class="editor-card span-2">
+      <h3>Identity</h3>
+      <label class="stack"><span>ID</span>
+        <input type="text" data-field="id" {% if not is_new %}readonly{% endif %} /></label>
+      <label class="stack"><span>Name</span>
+        <input type="text" data-field="name" /></label>
+      <label class="stack"><span>Tags</span>
+        <input type="text" data-field="tags" data-list="comma" /></label>
+      <label class="stack"><span>Description</span>
+        <textarea rows="3" data-field="description"></textarea></label>
+      <label class="stack"><span>Owner character <span class="muted small">(scopes the piece pickers; blank = shared preset)</span></span>
+        <select data-field="properties.owner">
+          <option value="">(none / shared)</option>
+          {% for c in all_characters %}<option value="{{ c.id }}">{{ c.name or c.id }}</option>{% endfor %}
+        </select></label>
+    </section>
+
+    <section class="editor-card span-2">
+      <h3>Equipped pieces <span class="muted small">(v2 — slot → clothing piece)</span></h3>
+      <p class="muted small">Applying this preset populates the character's <code>worn</code> map from these pieces (each in its default state). Leave a slot on "none" to leave it empty. The picker lists the owner's pieces first, then shared ones.</p>
+      <p class="muted small">Each equipped piece is editable right here — its states, per-part coverage (covered / revealing / description), and raw json. Use <strong>Save piece</strong> to persist just that piece, or the main <strong>Save</strong> to write the outfit and every edited piece at once.</p>
+      <div id="equips-list" class="equips-grid"></div>
+    </section>
+
+    <section class="editor-card span-2">
+      <h3>Signature description <span class="muted small">(the "ideal full look")</span></h3>
+      <p class="muted small">Shown as the single "Currently wearing:" line when the character's worn state exactly matches this preset (every piece in its default state). Any deviation falls back to per-piece composition.</p>
+      <label class="stack"><span>Signature description</span>
+        <textarea rows="5" data-field="properties.signature_description"></textarea></label>
+    </section>
+
+    <details class="editor-card span-2">
+      <summary><strong>Legacy (v1) fields</strong> <span class="muted small">— only for un-ported v1 outfits; leave blank on v2 bundles</span></summary>
+      <div class="row gap">
+        <label class="stack flex"><span>Extends</span>
+          <select data-field="properties.extends">
+            <option value="">(none)</option>
+            {% for o in all_outfits %}{% if not entity or o.id != entity.id %}<option value="{{ o.id }}">{{ o.name or o.id }}</option>{% endif %}{% endfor %}
+          </select></label>
+        <label class="stack flex"><span>Slot (v1)</span>
+          <input type="text" data-field="properties.slot" placeholder="body / head / hand / …" /></label>
+      </div>
+      <label class="stack"><span>Intact description (v1)</span>
+        <textarea rows="3" data-field="properties.intact_description"></textarea></label>
+      <label class="stack"><span>Concise description (v1)</span>
+        <textarea rows="2" data-field="properties.concise_description"></textarea></label>
+      <div class="row gap">
+        <label class="stack flex"><span>Material</span><input type="text" data-field="properties.material" /></label>
+        <label class="stack flex"><span>Color</span><input type="text" data-field="properties.color" /></label>
+        <label class="stack flex"><span>Fit</span><input type="text" data-field="properties.fit" /></label>
+        <label class="stack flex"><span>Style</span><input type="text" data-field="properties.style" /></label>
+      </div>
+      <label class="row toggle">
+        <input type="checkbox" data-field="properties.can_take" />
+        <span>Can be taken off / picked up</span>
+      </label>
+      <p class="muted small">The v1 <code>coverage</code> map (if any) is in the JSON tab.</p>
+    </details>
+  </div>
+</div>
+
+<div data-panel="json" style="display: none;">
+  <section class="editor-card">
+    <h3>JSON source</h3>
+    <p class="muted small">Anything not exposed by the form lives here. Edits apply on blur.</p>
+    <textarea id="entity-json" class="json-textarea" rows="30" spellcheck="false"></textarea>
+  </section>
+</div>
+
+</form>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/studio_outfit.js') }}"></script>
+{% endblock %}

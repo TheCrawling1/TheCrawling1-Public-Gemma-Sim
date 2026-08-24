@@ -1,0 +1,19 @@
+{
+  "id": "marginalia_rooftop",
+  "type": "room",
+  "name": "Rooftop Terrace",
+  "description": "A small flat rooftop above the shop, reached by the back stairs: a couple of folding chairs, a string of cheap bulbs Dex hung one summer, some half-dead planters Iris keeps meaning to revive, and a view over the wet rooftops of the neighbourhood. It's where the two of them end up on warm evenings after the bell's gone quiet.",
+  "tags": [
+    "exterior",
+    "rooftop"
+  ],
+  "example_text": "Rooftop terrace: folding chairs, a string of bulbs, tired planters, a view over the neighbourhood rooftops.",
+  "children": [],
+  "properties": {
+    "size": "small",
+    "lighting": "string bulbs and city glow after dark; open sky by day",
+    "exits": [
+      "marginalia_office"
+    ]
+  }
+}

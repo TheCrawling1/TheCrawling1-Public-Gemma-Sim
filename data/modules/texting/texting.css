@@ -1,0 +1,111 @@
+/* Texting module styles. Loaded for every page; inert when no
+   .texting-* classes are applied (texting module's JS only applies
+   them on messages that carry the metadata). */
+
+/* Composer-area: the Text button + dropdown. */
+
+.texting-composer-wrap {
+  /* NOT position:relative — the picker (position:absolute below) must anchor to
+     the .composer form (an ancestor of the mobile actions scroll-strip) so it
+     escapes that strip's overflow:auto clip. Same pattern pf1e uses for its
+     composer pickers. */
+  display: inline-flex;
+}
+
+.texting-composer-wrap button.texting-armed {
+  background: var(--accent, #59c);
+  color: white;
+  border-color: transparent;
+}
+
+.texting-composer-wrap button.texting-empty {
+  animation: texting-shake 0.4s;
+}
+
+@keyframes texting-shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-3px); }
+  75%      { transform: translateX(3px); }
+}
+
+.texting-picker {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--border, #444);
+  background: var(--bg, #1a1a1a);
+  border-radius: 6px;
+  z-index: 10;
+  min-width: 140px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+.texting-picker-row,
+.texting-picker-cancel {
+  text-align: left;
+  padding: 4px 8px;
+}
+
+.texting-picker-cancel {
+  border-top: 1px solid var(--border, #333);
+  margin-top: 4px;
+  padding-top: 6px;
+  opacity: 0.7;
+}
+
+/* Render styles for texting messages. CSS class is applied by
+   texting.js on Modules.onMessage; the three options match the
+   manifest's render_style enum. */
+
+/* sms_bubble: tight rounded bubbles with side alignment. */
+
+.msg.texting-style-sms_bubble.texting-message:not(.texting-reply) .msg-content {
+  margin-left: 25%;
+  /* A much darker green so the white text reads natively (the theme
+     --accent is a pale mint, unreadable with white text). */
+  background: rgb(28, 84, 53);
+  color: #fff;
+  border-radius: 18px 18px 4px 18px;
+  padding: 8px 12px;
+}
+
+/* NPC reply (incoming text): full width like a normal message — no
+   left-push/confinement — just a subtle incoming-bubble background so
+   it still reads as a text. (User's outgoing text keeps the right-side
+   bubble above.) */
+.msg.texting-style-sms_bubble.texting-message.texting-reply .msg-content {
+  margin-right: 0;
+  background: var(--surface-alt, #2a2a2a);
+  border-radius: 4px 18px 18px 18px;
+  padding: 8px 12px;
+}
+
+/* Strip any portrait / avatar columns from texting bubbles — texts
+   should read like a phone, not a chat avatar grid. */
+.msg.texting-style-sms_bubble.texting-message .msg-avatar,
+.msg.texting-style-sms_bubble.texting-message .msg-sprite {
+  display: none;
+}
+
+/* tinted: keep layout, just shift the background. Cheaper than full
+   bubble restyling; still visually scannable. */
+
+.msg.texting-style-tinted.texting-message .msg-content {
+  background: rgba(85, 153, 204, 0.08);
+  border-left: 2px solid var(--accent, #59c);
+  padding-left: 8px;
+}
+
+/* inline_badge: tiny SMS icon next to the speaker label. */
+
+.msg.texting-style-inline_badge.texting-message .msg-speaker::after {
+  content: " ✉";
+  margin-left: 4px;
+  font-size: 0.85em;
+  color: var(--accent, #59c);
+}

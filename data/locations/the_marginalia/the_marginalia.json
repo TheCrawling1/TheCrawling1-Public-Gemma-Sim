@@ -1,0 +1,25 @@
+{
+  "id": "the_marginalia",
+  "type": "location",
+  "name": "The Marginalia",
+  "description": "A small second-hand bookshop on a quiet city side-street, with a café counter tucked at the back. Mismatched shelves lean in close, a rolling ladder rides a brass rail along one wall, and warm lamplight pools over reading chairs that have clearly been sat in for years. It smells of old paper, coffee, and rain on the mat by the door. The kind of place that is always a little cluttered on purpose and always warmer inside than the weather outside.",
+  "tags": [
+    "interior",
+    "bookshop",
+    "cafe",
+    "cozy"
+  ],
+  "example_text": "A cozy second-hand bookshop-café: shop floor with a rolling ladder, a café counter, a reading nook, a back office, and a small rooftop terrace.",
+  "children": [
+    "marginalia_floor",
+    "marginalia_counter",
+    "marginalia_nook",
+    "marginalia_office",
+    "marginalia_rooftop"
+  ],
+  "properties": {
+    "ambient_sounds": "the tired rattle of the bell over the door, the hiss and gurgle of the espresso machine, pages turning, faint street noise and rain",
+    "lighting": "warm lamplight and the low gold of afternoon through a front window fogged at the corners",
+    "atmosphere": "unhurried, lived-in, quietly welcoming — a place that makes people stay longer than they meant to"
+  }
+}

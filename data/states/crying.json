@@ -1,0 +1,17 @@
+{
+  "id": "crying",
+  "type": "state",
+  "name": "Crying",
+  "description": "Generic actively-upset state. Apply with [state <char> -> crying]. Layers tears and a shaky, raw affect onto the character; overlays append to existing anatomy prose.",
+  "tags": ["state", "generic", "affect"],
+  "example_text": "",
+  "children": [],
+  "properties": {
+    "affect_summary": "Crying — emotionally overwhelmed, voice unsteady, defenses down. Whatever she says comes out cracked and unguarded.",
+    "mannerism_overlay": "Wipes at her eyes with the back of a hand or a sleeve, hitches on her breath, voice catching and breaking, looks away when it gets to be too much.",
+    "body_overlays": {
+      "head": "Her eyes are red-rimmed and glassy with tears, lashes wet and clumped, cheeks streaked and flushed; her nose has gone pink and she keeps sniffling.",
+      "chest": "Her breath comes in uneven, hitching pulls, chest jerking with each suppressed sob."
+    }
+  }
+}

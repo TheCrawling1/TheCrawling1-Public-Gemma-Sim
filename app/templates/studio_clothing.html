@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}{{ entity.name if entity else 'New clothing piece' }} — GemmaSim{% endblock %}
+{% block body_class %}studio-body editor-body{% endblock %}
+{% block head %}
+  <script id="entity-data" type="application/json">{{ entity|tojson if entity else 'null' }}</script>
+  <script id="entity-type" type="text/plain">clothing</script>
+  <script id="entity-is-new" type="text/plain">{{ 'true' if is_new else 'false' }}</script>
+{% endblock %}
+{% block content %}
+<section class="page-head editor-head">
+  <div>
+    <p class="muted small"><a href="{{ url_for('pages.studio') }}">← Studio</a></p>
+    <h1>{{ entity.name if entity else 'New clothing piece' }}</h1>
+    <p class="muted small">{{ entity.id if entity else '' }}</p>
+  </div>
+  <div class="page-head-actions">
+    <span id="editor-status" class="muted small"></span>
+    <button class="ghost" id="delete-entity">Delete</button>
+    <button class="primary" id="save-entity">Save</button>
+  </div>
+</section>
+
+<nav class="editor-tabs">
+  <a href="#" data-tab="form" class="active">Sheet</a>
+  <a href="#" data-tab="json">JSON source</a>
+</nav>
+
+<form class="editor-form" id="editor-form" autocomplete="off">
+
+<div data-panel="form">
+  <div class="editor-grid">
+    <section class="editor-card span-2">
+      <h3>Identity</h3>
+      <label class="stack"><span>ID</span>
+        <input type="text" data-field="id" {% if not is_new %}readonly{% endif %} placeholder="e.g. rosa_white_dress_shirt" /></label>
+      <label class="stack"><span>Name</span>
+        <input type="text" data-field="name" /></label>
+      <label class="stack"><span>Tags</span>
+        <input type="text" data-field="tags" data-list="comma" /></label>
+      <label class="stack"><span>Description</span>
+        <textarea rows="3" data-field="description"></textarea></label>
+      <label class="stack"><span>Example text</span>
+        <textarea rows="2" data-field="example_text"></textarea></label>
+    </section>
+
+    <section class="editor-card">
+      <h3>Piece</h3>
+      <label class="stack"><span>Slot</span>
+        <select data-field="properties.slot">
+          <option value="top">top</option>
+          <option value="bottom">bottom</option>
+          <option value="bra">bra</option>
+          <option value="panties">panties (underwear)</option>
+          <option value="pantyhose">pantyhose</option>
+          <option value="gloves">gloves</option>
+          <option value="legwear">legwear</option>
+          <option value="shoes">shoes</option>
+          <option value="head">head</option>
+          <option value="face">face</option>
+          <option value="neck">neck</option>
+          <option value="back">back</option>
+          <option value="overlay">overlay</option>
+        </select></label>
+      <label class="stack"><span>States <span class="muted small">(comma-list; first is the default)</span></span>
+        <input type="text" data-field="properties.states" data-list="comma" placeholder="on, off" /></label>
+      <label class="stack"><span>Garment <span class="muted small">(sprite garment id; "default" if none)</span></span>
+        <input type="text" data-field="properties.garment" placeholder="default" /></label>
+      <label class="stack"><span>Noun</span>
+        <input type="text" data-field="properties.noun" placeholder="shirt / bra / …" /></label>
+      <label class="stack"><span>Owner <span class="muted small">(character id, or blank for a shared piece)</span></span>
+        <select data-field="properties.owner">
+          <option value="">— shared / generic —</option>
+          {% for c in all_characters %}<option value="{{ c.id }}">{{ c.name or c.id }}</option>{% endfor %}
+        </select></label>
+    </section>
+
+    <section class="editor-card">
+      <h3>Look <span class="muted small">(templating fields)</span></h3>
+      <label class="stack"><span>Color</span><input type="text" data-field="properties.color" /></label>
+      <label class="stack"><span>Material</span><input type="text" data-field="properties.material" /></label>
+      <label class="stack"><span>Fit</span><input type="text" data-field="properties.fit" /></label>
+      <label class="stack"><span>Style</span><input type="text" data-field="properties.style" /></label>
+    </section>
+
+    <section class="editor-card span-2">
+      <h3>Per-part coverage</h3>
+      <p class="muted small">The states and the coverage map (state → body part → <code>{covered, revealing, description}</code>) are edited below. Coverage may only use the states listed here; anything else lives in the <strong>JSON source</strong> tab.</p>
+      <div id="coverage-mount"></div>
+    </section>
+  </div>
+</div>
+
+<div data-panel="json" style="display: none;">
+  <section class="editor-card">
+    <h3>JSON source</h3>
+    <p class="muted small">Anything not exposed by the form lives here (the coverage map especially). Edits apply on blur.</p>
+    <textarea id="entity-json" class="json-textarea" rows="30" spellcheck="false"></textarea>
+  </section>
+</div>
+
+</form>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/studio_clothing.js') }}"></script>
+{% endblock %}

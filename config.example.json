@@ -1,0 +1,68 @@
+{
+  "host": "127.0.0.1",
+  "port": 5000,
+  "debug": false,
+  "data_dir": "data",
+  "instances_dir": "instances",
+  "session_dir": "flask_session",
+  "image_host": "",
+  "_image_host_help": "Optional remote prefix for sprite URLs. When blank (default), the Flask app serves composed PNGs itself at /sprites/<sprite>/<csv>/<scene>, building each image locally from the asset directory below. Set this to a base URL only if you want to point at a remote sprite server instead (e.g. \"https://sprites.example.com\").",
+  "sprite_assets_dir": "data/sprites",
+  "_sprite_assets_dir_help": "Optional. Path (relative to project root, or absolute) to per-character sprite asset folders + a Scene/ background folder. Sprites are entirely optional — characters run text-only with no image assets. To use them, each <sprite_id>/ subdirectory must contain Image1.png .. Image14.png, and <Scene>/ one PNG per scene tag. The bundled sample characters ship no sprites, so this directory does not need to exist.",
+  "network": {
+    "_help": "IP allowlist for incoming HTTP. Empty list = open (loopback only by default since host is 127.0.0.1). Set host to 0.0.0.0 in config.local.json to listen on the LAN, then list every machine that should be allowed to connect under allowed_ips. Loopback (127.0.0.1, ::1) is always allowed. Exact-match IPv4/IPv6 strings; CIDR ranges are accepted via 'a.b.c.d/N' notation.",
+    "allowed_ips": [],
+    "trust_proxy": false
+  },
+  "ollama": {
+    "host": "http://127.0.0.1:11434",
+    "model": "gemma3",
+    "request_timeout_seconds": 600,
+    "keep_alive": -1,
+    "default_options": {
+      "temperature": 0.8,
+      "top_p": 0.95,
+      "num_ctx": 8192,
+      "repeat_penalty": 1.15,
+      "presence_penalty": 0.4,
+      "frequency_penalty": 0.4
+    }
+  },
+  "defaults": {
+    "context_limit_tokens": 8000,
+    "locational_memory": true,
+    "narrator_mode": "auto",
+    "turn_mode": "manual",
+    "image_pack_pick": false,
+    "_image_pack_pick_help": "Default for the per-conversation 'image_pack_pick' setting. When true, every character response triggers a second model call to pick an image from that character's image_pack catalog. Per-conversation overrides take precedence.",
+    "auto_state_changes": false,
+    "_auto_state_changes_help": "Default for the per-conversation 'auto_state_changes' setting. When true, every character response triggers a second surgical model call that re-reads the prose and emits any clothing/outfit directives the main pass forgot. Skips automatically when the main pass already emitted a clothing edit for the speaker, so most well-prompted turns cost nothing. Per-conversation overrides take precedence.",
+    "auto_state_on_user_messages": false,
+    "_auto_state_on_user_messages_help": "Sub-toggle: also run auto-state on the USER's messages, not just character responses. Useful when the user narrates their own state changes ('I take off my shirt') and wants the engine state to catch up. Off by default — doubles the auto-state model-call frequency. Silently no-op when 'auto_state_changes' is also off. Per-conversation overrides take precedence.",
+    "style_discipline": {
+      "banned_phrases": [
+        "shifts her weight to one hip",
+        "shifts her weight",
+        "I was thinking we could",
+        "emerald eyes shimmering",
+        "playful glint",
+        "playful tilt of her head",
+        "leave nothing to the imagination",
+        "leaves nothing to the imagination",
+        "leaving nothing to the imagination",
+        "left nothing to the imagination",
+        "to the imagination",
+        "a mix of",
+        "the air thick with",
+        "a testament to",
+        "a symphony of",
+        "in a dance of",
+        "eyes sparkling with mischief",
+        "cheeks flushing crimson",
+        "couldn't help but",
+        "can't help but",
+        "little did she know"
+      ]
+    }
+  }
+}

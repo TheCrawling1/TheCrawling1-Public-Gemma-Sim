@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+{% block title %}{{ entity.name if entity else 'New character' }} — GemmaSim{% endblock %}
+{% block body_class %}studio-body editor-body{% endblock %}
+{% block head %}
+  <script id="entity-data" type="application/json">{{ entity|tojson if entity else 'null' }}</script>
+  <script id="entity-type" type="text/plain">character</script>
+  <script id="entity-is-new" type="text/plain">{{ 'true' if is_new else 'false' }}</script>
+  <script id="clothing-catalog" type="application/json">[{% for c in all_clothing %}{"id": {{ c.id|tojson }}, "name": {{ (c.name or c.id)|tojson }}, "slot": {{ ((c.properties or {}).get('slot') or '')|tojson }}, "owner": {{ ((c.properties or {}).get('owner') or '')|tojson }}, "states": {{ ((c.properties or {}).get('states') or [])|tojson }}}{% if not loop.last %},{% endif %}{% endfor %}]</script>
+  <script id="outfit-equips" type="application/json">{% set ns = namespace(first=true) %}{ {% for o in all_outfits %}{% set eq = (o.properties or {}).get('equips') %}{% if eq %}{% if not ns.first %},{% endif %}{% set ns.first = false %}{{ o.id|tojson }}: {"name": {{ (o.name or o.id)|tojson }}, "equips": {{ eq|tojson }}}{% endif %}{% endfor %} }</script>
+{% endblock %}
+{% block content %}
+<section class="page-head editor-head">
+  <div>
+    <p class="muted small"><a href="{{ url_for('pages.studio') }}">← Studio</a></p>
+    <h1 id="editor-title">{{ entity.name if entity else 'New character' }}</h1>
+    <p class="muted small" id="editor-subtitle">{{ entity.id if entity else '' }}</p>
+  </div>
+  <div class="page-head-actions">
+    <span id="editor-status" class="muted small"></span>
+    <button class="ghost" id="delete-entity">Delete</button>
+    <button class="primary" id="save-entity">Save</button>
+  </div>
+</section>
+
+<nav class="editor-tabs">
+  <a href="#" data-tab="form" class="active">Sheet</a>
+  <a href="#" data-tab="bodyparts">Body parts</a>
+  <a href="#" data-tab="outfits">Clothing</a>
+  <a href="#" data-tab="worn">Worn (v2)</a>
+  <a href="#" data-tab="images-tab">Images</a>
+  <a href="#" data-tab="json">JSON source</a>
+</nav>
+
+<form class="editor-form" id="editor-form" autocomplete="off">
+
+<div data-panel="form">
+  <div class="editor-grid">
+    {% set im = (entity.properties.images if entity and entity.properties else {}) or {} %}
+    {% set entries = im.entries or [] %}
+    {% set packs = (entity.properties.image_packs if entity and entity.properties else {}) or {} %}
+    {% set fmt = (im.format or '')|lower %}
+    {% set has_portrait = entity and entity.properties and entity.properties.portrait %}
+    <section class="editor-card portrait-card">
+      <h3>Images</h3>
+      <div class="portrait-preview" id="portrait-preview">
+        {% if fmt == 'tagged' and entries %}
+          <img src="{{ entries[0].image_url }}" alt="" />
+        {% elif has_portrait %}
+          <img src="{{ url_for('pages.portrait', character_id=entity.id) }}" alt="" />
+        {% else %}
+          <div class="placeholder">no image</div>
+        {% endif %}
+      </div>
+
+      <p class="small" style="margin-top: 8px;">
+        {% if fmt == 'combined' or im.sprite_id %}
+          <strong>Composed sprite</strong> <span class="muted">— layered live in-game{% if im.sprite_id %} from <code>{{ im.sprite_id }}</code>{% endif %}</span>
+        {% elif fmt == 'tagged' or entries or packs %}
+          <strong>Image pack</strong> <span class="muted">— {{ entries|length }} base image{{ '' if entries|length == 1 else 's' }}{% if packs %}, {{ packs|length }} pack{{ '' if packs|length == 1 else 's' }}{% endif %}</span>
+        {% elif has_portrait %}
+          <strong>Portrait only</strong>
+        {% else %}
+          <strong class="muted">No images</strong>
+        {% endif %}
+      </p>
+
+      {% if fmt == 'tagged' and entries %}
+        <div class="image-thumb-strip">
+          {% for e in entries[:6] %}<img src="{{ e.image_url }}" alt="" title="{{ (e.caption or '')[:80] }}" />{% endfor %}
+        </div>
+        {% if packs %}
+          <p class="muted small">Packs: {% for pid, pk in packs.items() %}{{ pk.name or pid }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+        {% endif %}
+        <p class="muted small">Per-branch pack selection + the Composed/Pack render toggle live in the chat cast panel.</p>
+      {% elif fmt == 'combined' or im.sprite_id %}
+        <p class="muted small">Composed live from the Worn slots in-game (see the Worn tab), from the <code>{{ im.sprite_id }}</code> sprite assets.</p>
+      {% endif %}
+
+      <details class="image-portrait-upload">
+        <summary class="muted small">Portrait (fallback still image){% if has_portrait %} · set{% endif %}</summary>
+        <input type="file" id="portrait-file" accept="image/*" />
+        <p class="muted small">PNG/JPG/WebP → <code>data/characters/&lt;id&gt;/portrait.&lt;ext&gt;</code>. Used where no composed sprite / pack image applies.</p>
+      </details>
+    </section>
+
+    <section class="editor-card">
+      <h3>Identity</h3>
+      <label class="stack">
+        <span>ID</span>
+        <input type="text" data-field="id" {% if not is_new %}readonly{% endif %} placeholder="e.g. iris" />
+      </label>
+      <label class="stack">
+        <span>Name</span>
+        <input type="text" data-field="name" />
+      </label>
+      <label class="stack">
+        <span>Tags <span class="muted small">(comma separated)</span></span>
+        <input type="text" data-field="tags" data-list="comma" />
+      </label>
+      <label class="stack">
+        <span>Description</span>
+        <textarea rows="6" data-field="description"></textarea>
+      </label>
+    </section>
+
+    <section class="editor-card">
+      <h3>Defaults</h3>
+      <label class="stack">
+        <span>Default outfit</span>
+        <select data-field="properties.current_outfit">
+          <option value="">(none)</option>
+          {% for o in all_outfits %}<option value="{{ o.id }}">{{ o.name or o.id }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="stack">
+        <span>Default location</span>
+        <select data-field="properties.default_location">
+          <option value="">(none)</option>
+          {% for l in all_locations %}<option value="{{ l.id }}">{{ l.name or l.id }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="stack">
+        <span>Default room</span>
+        <select data-field="properties.default_room">
+          <option value="">(none)</option>
+          {% for r in all_rooms %}<option value="{{ r.id }}">{{ r.name or r.id }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="row toggle">
+        <input type="checkbox" data-field="properties.can_talk" />
+        <span>Can talk</span>
+      </label>
+      <label class="row toggle">
+        <input type="checkbox" data-field="properties.can_move" />
+        <span>Can move between rooms</span>
+      </label>
+      <label class="row toggle">
+        <input type="checkbox" data-field="properties.can_edit_world" />
+        <span>Can edit world (narrator privileges)</span>
+      </label>
+    </section>
+
+    <section class="editor-card">
+      <h3>Personality</h3>
+      <p class="muted small">0–100. Anything above 0 will be included in the prompt.</p>
+      <div class="personality-grid" id="personality-grid"></div>
+      <div class="row gap">
+        <input type="text" id="new-personality-key" placeholder="new trait (e.g. curiosity)" />
+        <button type="button" class="ghost small" id="add-personality">+ Add</button>
+      </div>
+    </section>
+
+    <section class="editor-card span-2">
+      <h3>First message</h3>
+      <p class="muted small">Macros: <code>&#123;&#123;user&#125;&#125;</code>, <code>&#123;&#123;char&#125;&#125;</code>.</p>
+      <textarea rows="5" data-field="properties.first_message"></textarea>
+    </section>
+
+    <section class="editor-card span-2">
+      <h3>Example text</h3>
+      <p class="muted small">A representative one-liner that the prompt assembler can quote as a stylistic primer.</p>
+      <textarea rows="4" data-field="example_text"></textarea>
+    </section>
+  </div>
+</div>
+
+<div data-panel="bodyparts" style="display: none;">
+  <section class="editor-card">
+    <h3>Body parts</h3>
+    <p class="muted small">The character is the "base doll." Outfits layer their <code>coverage</code> on top to clothe these parts.</p>
+    <div id="bodyparts-list"></div>
+    <div class="row gap">
+      <input type="text" id="new-bodypart-key" placeholder="new part (e.g. tail)" />
+      <button type="button" class="ghost small" id="add-bodypart">+ Add</button>
+    </div>
+  </section>
+</div>
+
+<div data-panel="outfits" style="display: none;">
+  <section class="editor-card">
+    <h3>Owned outfits</h3>
+    <p class="muted small">Listed from <code>properties.outfits</code>. Each one is a separate entity — open it to edit.</p>
+    <ul class="outfit-list" id="owned-outfits"></ul>
+    <div class="row gap">
+      <select id="add-outfit-select">
+        <option value="">— add existing outfit —</option>
+        {% for o in all_outfits %}<option value="{{ o.id }}">{{ o.name or o.id }}</option>{% endfor %}
+      </select>
+      <button type="button" class="ghost small" id="add-outfit-existing">Add</button>
+      <a class="ghost small" href="{{ url_for('pages.studio_new', entity_type='outfit') }}" target="_blank" rel="noopener">+ New outfit</a>
+    </div>
+  </section>
+
+  <section class="editor-card">
+    <h3>Owned clothing pieces <span class="muted small">(v2)</span></h3>
+    <p class="muted small">The individual v2 <code>clothing</code> pieces owned by this character (their <code>properties.owner</code> is this id). Outfits above equip these by slot. Open a piece to edit its per-part coverage.</p>
+    <ul class="outfit-list">
+      {% if entity %}
+        {% for c in all_clothing if c.properties and c.properties.owner == entity.id %}
+          <li>
+            <a href="{{ url_for('pages.studio_edit', entity_type='clothing', entity_id=c.id) }}">{{ c.name or c.id }}</a>
+            <span class="muted small">{{ c.properties.slot }}{% if c.properties.states %} · {{ c.properties.states|join(' / ') }}{% endif %}</span>
+          </li>
+        {% else %}
+          <li class="muted small">No owned pieces yet.</li>
+        {% endfor %}
+      {% else %}
+        <li class="muted small">Save the character first, then add pieces owned by it.</li>
+      {% endif %}
+    </ul>
+    <a class="ghost small" href="{{ url_for('pages.studio_new', entity_type='clothing') }}" target="_blank" rel="noopener">+ New clothing piece</a>
+    <p class="muted small">Set the new piece's <strong>Owner</strong> to this character so it lists here.</p>
+  </section>
+</div>
+
+<div data-panel="worn" style="display: none;">
+  <section class="editor-card">
+    <h3>Apply an outfit preset</h3>
+    <p class="muted small">Populates the <code>worn</code> map below from a bundle's equipped pieces (each in its default state) — this is what flips the character onto the v2 render path. Applying replaces the current worn map.</p>
+    <div class="row gap">
+      <select id="apply-preset-select" style="flex:1">
+        <option value="">— choose an outfit bundle —</option>
+      </select>
+      <button type="button" class="ghost small" id="apply-preset">Apply preset</button>
+      <button type="button" class="ghost small" id="clear-worn">Clear (no outfit)</button>
+    </div>
+    <label class="row toggle" style="margin-top: 8px;">
+      <input type="checkbox" id="apply-layer" />
+      <span class="muted small">Layer onto current — only overwrite the bundle's slots, keep the rest (e.g. business attire, then layer a camisole into the bra/underwear slots under it)</span>
+    </label>
+    <p class="muted small" id="worn-preset-note"></p>
+  </section>
+
+  <section class="editor-card">
+    <h3>Currently worn <span class="muted small">(slot → piece → state)</span></h3>
+    <p class="muted small">A non-empty worn map renders via v2 per-piece composition. Each slot picks one owned/shared piece and its state; the default state (first listed) fires the outfit signature when the whole map matches a bundle.</p>
+    <div id="worn-list" class="equips-grid"></div>
+    <p class="muted small">Tip: leave a slot on "— none —" to bare it. Clear every slot for a v2 character with no outfit.</p>
+  </section>
+
+  <section class="editor-card">
+    <div class="row gap" style="justify-content: space-between; align-items: baseline;">
+      <h3>Prompt preview <span class="muted small">(exactly what the model sees for this worn state)</span></h3>
+      <button type="button" class="ghost small" id="refresh-preview">Refresh</button>
+    </div>
+    <p class="muted small">Live-composed from the current (unsaved) worn map — the "Currently wearing:" line plus the per-part Appearance block. Covered parts are suppressed when the full-preset signature fires.</p>
+    <pre id="worn-preview" class="json-inline" style="white-space: pre-wrap;">Loading…</pre>
+  </section>
+</div>
+
+<div data-panel="images-tab" style="display: none;">
+  <div class="editor-grid">
+    <section class="editor-card span-2">
+      <h3>Composed outfits <span class="muted small">(the sprite rendered for each outfit)</span></h3>
+      <p class="muted small">For sprite (combined-format) characters, each owned outfit is composed from its worn pieces. Non-sprite characters show the outfit stats only.</p>
+      <div id="images-outfits"><p class="muted small">Save the character first to preview composed outfits.</p></div>
+    </section>
+
+    <section class="editor-card span-2">
+      <h3>New outfit from an image set <span class="muted small">(image-backed)</span></h3>
+      <p class="muted small">Upload a set of composed images to spin up a new outfit. The images become a pack tagged to the outfit, so the picker draws from them while the outfit is worn. (True layer-composited sprite outfits need wardrobe assets instead — this is the flat-image path.)</p>
+      <div class="row gap">
+        <input type="text" id="new-outfit-name" placeholder="outfit name (e.g. Beach day)" style="flex:1" />
+        <label class="ghost small as-button">Choose images<input type="file" id="new-outfit-files" accept="image/*" multiple hidden /></label>
+        <button type="button" class="ghost small" id="create-outfit-images">Create outfit</button>
+      </div>
+      <p class="muted small" id="new-outfit-files-count"></p>
+    </section>
+
+    <section class="editor-card span-2">
+      <h3>Base image catalog <span class="muted small">(tagged <code>{caption, image_url}</code>)</span></h3>
+      <p class="muted small">The always-on catalog the image-picker draws from. Upload adds files under <code>data/characters/&lt;id&gt;/images/</code>.</p>
+      <div id="images-base" class="image-gallery"></div>
+      <div class="row gap image-upload-row">
+        <input type="text" id="images-base-caption" placeholder="caption (danbooru-style tags)" style="flex:1" />
+        <label class="ghost small as-button">Upload image<input type="file" id="images-base-upload" accept="image/*" hidden /></label>
+      </div>
+    </section>
+
+    <section class="editor-card span-2">
+      <h3>Image packs <span class="muted small">(tag each with <code>expose_tags</code>)</span></h3>
+      <p class="muted small">A pack's images become available when a scene tag matches its <strong>expose tags</strong> (or it's default-on). Tag a pack to gate it to a scenario/outfit/object.</p>
+      <div id="images-packs"></div>
+      <div class="row gap">
+        <input type="text" id="new-pack-id" placeholder="new pack id (e.g. beach)" />
+        <button type="button" class="ghost small" id="add-pack">+ New pack</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div data-panel="json" style="display: none;">
+  <section class="editor-card">
+    <h3>JSON source</h3>
+    <p class="muted small">Anything not exposed by the form lives here. Edits apply on blur.</p>
+    <textarea id="entity-json" class="json-textarea" rows="30" spellcheck="false"></textarea>
+  </section>
+</div>
+
+</form>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/studio_character.js') }}"></script>
+{% endblock %}

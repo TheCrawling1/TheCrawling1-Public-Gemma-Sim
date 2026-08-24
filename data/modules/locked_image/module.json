@@ -1,0 +1,30 @@
+{
+  "id": "locked_image",
+  "type": "module",
+  "name": "Locked image",
+  "description": "Pin a character image to the top of the chat column. The frame stays visible as chat scrolls underneath; as you scroll up through history, the frame swaps to show the image attached to whichever message is currently next to it. Image source is each message's image_pack_pick.image_url (the same picker the inline image-pack widget uses). Inline per-message images are hidden — the locked frame is the canonical image surface.",
+  "tags": ["ui", "image", "frame"],
+  "requires": [],
+  "conflicts": [],
+  "settings": [
+    {
+      "id": "height_px",
+      "type": "int",
+      "default": null,
+      "min": 120,
+      "max": 2000,
+      "label": "Frame height (px)",
+      "help": "Optional pixel override for the frame height. Default (unset) uses a 50vh cap so the bottom half of the viewport stays for chat. Set a number to lock to a specific pixel height instead.",
+      "live_editable": true
+    }
+  ],
+  "contributes": {
+    "gui_controls": [
+      {
+        "slot": "chat_above",
+        "kind": "frame",
+        "id": "locked_image_frame"
+      }
+    ]
+  }
+}

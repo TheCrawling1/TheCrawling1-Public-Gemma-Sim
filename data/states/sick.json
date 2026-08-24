@@ -1,0 +1,17 @@
+{
+  "id": "sick",
+  "type": "state",
+  "name": "Sick (feverish)",
+  "description": "Generic illness state. Apply with [state <char> -> sick]. Layers fever, chills and weakness onto the character; overlays append to existing anatomy prose.",
+  "tags": ["state", "generic", "ailment"],
+  "example_text": "",
+  "children": [],
+  "properties": {
+    "affect_summary": "Sick — feverish and weak, mind foggy. Hot and shivery at once, low on energy, just wanting to lie down.",
+    "mannerism_overlay": "Shivers despite the warmth, wraps her arms around herself, sniffles and coughs, moves slowly and gingerly, voice thick and nasal.",
+    "body_overlays": {
+      "head": "Her face is flushed with fever and sheened in a faint sweat, eyes glassy and over-bright, nose red and raw; damp strands of hair stick to her forehead.",
+      "arms": "Her arms are wrapped around herself against the chills running through her."
+    }
+  }
+}

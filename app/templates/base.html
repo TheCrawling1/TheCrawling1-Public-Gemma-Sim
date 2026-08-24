@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <!-- Deliberately minimal: NO viewport-fit=cover and NO interactive-widget.
+       - viewport-fit=cover makes env(safe-area-inset-*) report real insets; on
+         Firefox Android that "bottom inset" is the system nav bar, which leaked
+         a dead gap under the composer. Left off so every env() inset is 0 and
+         the composer sits flush on all browsers.
+       - interactive-widget=resizes-content is a keyboard hint with shaky
+         Firefox Android support; we now size the chat layout from
+         window.visualViewport (chat.js) instead, which shrinks with the
+         keyboard on its own, so the hint is unnecessary and one less thing for
+         Firefox to mis-handle around its dynamic toolbar. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}GemmaSim{% endblock %}</title>
+  <link rel="stylesheet" href="{{ asset('css/style.css') }}" />
+  <script>
+    // Apply user-chosen layer colors (set on the Settings page) as CSS vars.
+    try {
+      const c = JSON.parse(localStorage.getItem("layer_colors") || "{}");
+      const r = document.documentElement.style;
+      if (c.template) r.setProperty("--layer-template", c.template);
+      if (c.scenario) r.setProperty("--layer-scenario", c.scenario);
+      if (c.instance) r.setProperty("--layer-instance", c.instance);
+      if (c.unset)    r.setProperty("--layer-unset",    c.unset);
+    } catch {}
+  </script>
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  {% if session.get('user') and not hide_nav %}
+  <nav class="topbar">
+    <a class="brand" href="{{ url_for('pages.dashboard') }}">
+      <span class="brand-mark">G</span>
+      <span class="brand-name">GemmaSim</span>
+    </a>
+    <div class="topbar-center">
+      <div class="api-bar" id="api-bar" data-status="unknown" title="Ollama backend">
+        <span class="dot"></span>
+        <select id="topbar-model" class="topbar-select" title="Active model"><option value="">…</option></select>
+        <button class="ghost xs" id="topbar-warmup" title="Load the model into memory (avoids cold-start delay on first message)">Warmup</button>
+        <button class="ghost xs" id="topbar-test" title="Test connection">Test</button>
+      </div>
+    </div>
+    <div class="links">
+      <a href="{{ url_for('pages.dashboard') }}" class="navlink {% if request.endpoint == 'pages.dashboard' %}active{% endif %}">Dashboard</a>
+      <a href="{{ url_for('pages.studio') }}" class="navlink {% if request.endpoint == 'pages.studio' %}active{% endif %}">Studio</a>
+      <a href="{{ url_for('pages.settings_page') }}" class="navlink {% if request.endpoint == 'pages.settings_page' %}active{% endif %}">Settings</a>
+      <span class="user-chip" title="Signed in as {{ session.get('user') }}">{{ session.get('user') }}</span>
+      <form method="post" action="{{ url_for('auth.logout') }}" class="logout-form">
+        <button class="ghost small" type="submit">Logout</button>
+      </form>
+    </div>
+  </nav>
+  <script src="{{ asset('js/topbar.js') }}" defer></script>
+  {% endif %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flashes">
+        {% for cat, msg in messages %}<div class="flash flash-{{ cat }}">{{ msg }}</div>{% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  <main class="content">
+    {% block content %}{% endblock %}
+  </main>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

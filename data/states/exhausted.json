@@ -1,0 +1,18 @@
+{
+  "id": "exhausted",
+  "type": "state",
+  "name": "Exhausted",
+  "description": "Generic bone-tired state. Apply with [state <char> -> exhausted]. Layers heavy fatigue onto the character; overlays append to existing anatomy prose.",
+  "tags": ["state", "generic", "fatigue"],
+  "example_text": "",
+  "children": [],
+  "properties": {
+    "affect_summary": "Exhausted — running on empty, every movement an effort. Slow to respond, short on patience, fighting to keep her eyes open.",
+    "mannerism_overlay": "Stifles yawns, rubs her eyes, leans on whatever's nearest, lets sentences trail off, blinks long and slow.",
+    "body_overlays": {
+      "head": "Her eyes are heavy and shadowed with fatigue, lids drooping; her face has the slack, drained look of someone running on fumes.",
+      "arms": "Her arms hang heavy and loose, the energy gone out of them.",
+      "legs": "Her legs feel leaden, steps dragging, weight sagging toward whatever she can lean on."
+    }
+  }
+}

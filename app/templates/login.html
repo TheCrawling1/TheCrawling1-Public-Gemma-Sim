@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% set hide_nav = true %}
+{% block title %}Sign in — GemmaSim{% endblock %}
+{% block body_class %}auth{% endblock %}
+{% block content %}
+<div class="auth-card">
+  <header class="auth-head">
+    <span class="brand-mark large">G</span>
+    <h1>GemmaSim</h1>
+    <p class="muted">Sign in to continue.</p>
+  </header>
+  <form method="post" class="auth-form">
+    <label>
+      <span>Username</span>
+      <input type="text" name="username" autocomplete="username" required autofocus />
+    </label>
+    <label>
+      <span>Password</span>
+      <input type="password" name="password" autocomplete="current-password" required />
+    </label>
+    <button type="submit" class="primary block">Sign in</button>
+  </form>
+</div>
+{% endblock %}

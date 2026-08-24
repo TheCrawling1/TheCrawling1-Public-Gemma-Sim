@@ -1,0 +1,18 @@
+{
+  "id": "sunburnt",
+  "type": "state",
+  "name": "Sunburnt",
+  "description": "Generic sunburn state. Apply with [state <char> -> sunburnt]. Layers reddened, tender skin onto the character; overlays append to existing anatomy prose.",
+  "tags": ["state", "generic", "ailment"],
+  "example_text": "",
+  "children": [],
+  "properties": {
+    "affect_summary": "Sunburnt — skin hot and tender across the exposed areas, flinching at contact, faintly miserable about it.",
+    "mannerism_overlay": "Winces when anything brushes the burn, holds clothing away from raw skin, hisses at sudden contact, moves stiffly.",
+    "body_overlays": {
+      "chest": "The skin across her chest is flushed an angry pink-red, hot and tender, tight enough that it stings when she moves.",
+      "arms": "Her shoulders and arms are sunburnt red, the skin tender and warm to the touch.",
+      "legs": "The tops of her legs are reddened and sun-tender."
+    }
+  }
+}

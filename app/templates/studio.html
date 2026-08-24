@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Studio — GemmaSim{% endblock %}
+{% block body_class %}studio-body{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1>Building Blocks Studio</h1>
+    <p class="muted">Pick an entity to edit it on its own page, or create a new one.</p>
+  </div>
+  <div class="page-head-actions">
+    <details class="new-entity-menu">
+      <summary class="primary as-button">New entity ▾</summary>
+      <ul class="popover">
+        <li><a href="{{ url_for('pages.studio_new', entity_type='character') }}">New character</a></li>
+        <li><a href="{{ url_for('pages.studio_new', entity_type='location') }}">New location</a></li>
+        <li><a href="{{ url_for('pages.studio_new', entity_type='room') }}">New room</a></li>
+        <li><a href="{{ url_for('pages.studio_new', entity_type='outfit') }}">New outfit</a></li>
+        <li><a href="{{ url_for('pages.studio_new', entity_type='clothing') }}">New clothing piece</a></li>
+        <li><a href="{{ url_for('pages.studio_new', entity_type='object') }}">New object</a></li>
+        <li><a href="{{ url_for('pages.studio_new', entity_type='scenario') }}">New scenario</a></li>
+      </ul>
+    </details>
+  </div>
+</section>
+
+<div class="studio-index">
+  <input id="entity-filter" type="search" placeholder="Filter by name or tag…" class="full" />
+
+  {% for label, type_key, items in [
+      ('Characters', 'character', characters),
+      ('Locations', 'location', locations),
+      ('Rooms', 'room', rooms),
+      ('Outfits', 'outfit', outfits),
+      ('Clothing pieces (shared)', 'clothing', clothing),
+      ('Objects', 'object', objects),
+      ('Scenarios', 'scenario', scenarios)
+  ] %}
+    <section class="studio-section">
+      <header class="section-head">
+        <h2>{{ label }} <span class="muted small">({{ items|length }})</span></h2>
+        <a class="ghost small" href="{{ url_for('pages.studio_new', entity_type=type_key) }}">+ New</a>
+      </header>
+      {% if items %}
+      <div class="card-grid studio-grid">
+        {% for e in items %}
+          <a class="card studio-card" href="{{ url_for('pages.studio_edit', entity_type=type_key, entity_id=e.id) }}"
+             data-name="{{ (e.name or e.id)|lower }}"
+             data-tags="{{ (e.tags or [])|join(' ')|lower }}">
+            {% if type_key == 'character' and e.properties and e.properties.portrait %}
+              <img class="card-thumb" src="{{ url_for('pages.portrait', character_id=e.id) }}" alt="" />
+            {% elif type_key == 'character' %}
+              <span class="card-thumb placeholder">{{ (e.name or e.id)[0] | upper }}</span>
+            {% endif %}
+            <div class="card-body">
+              <h3>{{ e.name or e.id }}</h3>
+              {% if e.description %}<p class="muted small clamp-2">{{ e.description }}</p>{% endif %}
+              {% if e.tags %}<div class="tags">{% for t in e.tags %}<span class="tag">{{ t }}</span>{% endfor %}</div>{% endif %}
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+      {% else %}
+        <p class="muted small">None yet.</p>
+      {% endif %}
+    </section>
+  {% endfor %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  // Live filter across all studio cards by name + tags.
+  const filter = document.getElementById('entity-filter');
+  filter?.addEventListener('input', () => {
+    const q = filter.value.toLowerCase().trim();
+    document.querySelectorAll('.studio-card').forEach((card) => {
+      const hay = (card.dataset.name || '') + ' ' + (card.dataset.tags || '');
+      card.style.display = !q || hay.includes(q) ? '' : 'none';
+    });
+  });
+</script>
+{% endblock %}
